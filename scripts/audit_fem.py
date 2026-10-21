@@ -255,12 +255,13 @@ def sq(s):
     return s * s, s ** 4 / 12, s ** 3 / 6  # A, I, Z
 
 
-def add_deck(m, xs, s_str=5.0, tie=True, anchor=False):
-    """床版縦桁（タイ）。支点: 左ピン・右ローラー（anchor=True なら右もピン）。"""
-    A, I, _ = sq(s_str)
+def add_deck(m, xs, s_str=5.0, tie=True, anchor=False, h_str=None):
+    """床版縦桁（タイ）。幅 s_str × 高さ h_str。支点: 左ピン・右ローラー（anchor=True なら右もピン）。"""
+    h = h_str or s_str
+    A, I = s_str * h, s_str * h ** 3 / 12
     E = MAT["E"]
-    nodes = [m.node(x, s_str / 2) for x in xs]
-    ids = m.beam_line(nodes, 2, E * A * (1 if tie else 1e-4), E * I, kind="S", rows=1, s=s_str)
+    nodes = [m.node(x, h / 2) for x in xs]
+    ids = m.beam_line(nodes, 2, E * A * (1 if tie else 1e-4), E * I, kind="S", rows=1, s=s_str, b=s_str, h=h)
     m.fix[("u", ids[0])] = m.fix[("v", ids[0])] = m.fix[("v", ids[-1])] = True
     if anchor:
         m.fix[("u", ids[-1])] = True
@@ -398,6 +399,12 @@ def pratt(s_chord=5.0, s_web=3.0, h=90.0, nsub=2):
 
 
 # ---------------------------------------------------------------- 照査
+def rect(e):
+    """部材の断面積・面内断面係数・面外断面二次モーメント。h は面内（半径方向）の寸法。"""
+    b, h = e.get("b", e["s"]), e.get("h", e["s"])
+    return b * h, b * h * h / 6, h * b ** 3 / 12
+
+
 def evaluate(m):
     m.number()
     u, F = m.solve()
@@ -406,15 +413,15 @@ def evaluate(m):
     for e, f in zip(m.elems, F):
         k = e.get("kind")
         if k in ("A", "B", "TC", "EP", "W"):
-            A, I, Z = sq(e["s"])
+            A, Z, I_oop = rect(e)
             N, M = f["N"] / e["rows"], f["M"] / e["rows"]
             fa = MAT["ft"] if N > 0 else MAT["fc"]
             ua, ub = abs(N) / (A * fa), M / (Z * MAT["fm"])
             if ua + ub > worst["member"][0]:
                 worst["member"] = (ua + ub, "%s 軸%.0f%%・曲げ%.0f%%" % (k, 100 * ua / (ua + ub), 100 * ub / (ua + ub)))
             if N < 0:  # 面外座屈（横材・節点間を座屈長、ピン）
-                Lb = 75.0 if k in ("A", "B") else math.dist(m.nodes[e["i"]], m.nodes[e["j"]]) * 2
-                ncr = math.pi ** 2 * MAT["E"] * I / Lb ** 2
+                Lb = e.get("lb", 75.0) if k in ("A", "B") else math.dist(m.nodes[e["i"]], m.nodes[e["j"]]) * 2
+                ncr = math.pi ** 2 * MAT["E"] * I_oop / Lb ** 2
                 if -N / ncr > worst["oop"][0]:
                     worst["oop"] = (-N / ncr, "%s Lb=%.0f" % (k, Lb))
             if k in ("TC", "EP", "W") or (k == "A" and e.get("gusset")):
@@ -426,17 +433,18 @@ def evaluate(m):
             cap = 2 * e["s"] * SPLICE_L * MAT["tau_lap"]
             if max(0.0, f["N"]) / cap > worst["joint"][0]:
                 worst["joint"] = (max(0.0, f["N"]) / cap, "縦桁（タイ）継手")
-            A, I, Z = sq(e["s"])
+            A, Z, _ = rect(e)
             fa = MAT["ft"] if f["N"] > 0 else MAT["fc"]
             ut = abs(f["N"]) / (A * fa) + f["M"] / (Z * MAT["fm"])
             if ut > worst["member"][0]:
                 worst["member"] = (ut, "床版縦桁（曲げ・軸）")
         elif k == "J":
-            area = e["s"] * md.T_TRANS
+            area = e.get("area", e["s"] * md.T_TRANS)
             n = e["rows"]
             ub = max(0.0, -f["N"]) / n / (area * MAT["fc90"])
-            us = f["V"] / n / (area * MAT["tau"])
-            ut = max(0.0, f["N"]) / n / (area * MAT["tau"])
+            cap = e.get("jcap", area * MAT["tau"])   # 交差1か所の接着耐力（補強があれば jcap）
+            us = f["V"] / n / cap
+            ut = max(0.0, f["N"]) / n / cap
             u_ = max(ub, us, ut)
             if u_ > worst["joint"][0]:
                 which = "めり込み" if u_ == ub else ("接着せん断" if u_ == us else "接着引張")
