@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""ダビンチアーチ橋（上路式）の簡易図面 SVG と確認用 STL を生成する。
+"""ダビンチアーチ橋（下路式・タイドアーチ）の簡易図面 SVG と確認用 STL を生成する。
 
 標準ライブラリのみ使用。寸法の単位はすべて mm。
-座標系: x = 橋軸方向（左支点 0 → 右支点 SPAN）、y = 鉛直上向き（支点上面 0）、
+座標系: x = 橋軸方向（左支点 0 → 右支点 SPAN）、y = 鉛直上向き（支点頂部 0）、
         z = 幅員方向（橋軸中心 0）。STL では (x, z, y) に並べ替えて Z 上向きで出力する。
+
+構成: 床版の両外側に立てたダビンチアーチのリブ2本から、床版を釣り糸で吊る。
+アーチの水平力は床版縦桁（タイ）で受け、三角支点には鉛直反力だけを伝える。
 
     python3 scripts/make_draft.py
 """
@@ -12,7 +15,7 @@ import os
 from collections import OrderedDict
 
 # ---- 課題条件（実施要領） ----
-SPAN = 500.0              # 支間
+SPAN = 500.0              # 支間（三角支点の頂部間）
 MAX_MEMBER = 150.0        # 一部材の最大長
 DECK_W_MIN = 80.0         # 床版有効幅の下限
 CLEAR_MIN = 80.0          # 床版上有効高さの下限
@@ -23,19 +26,21 @@ N_SEG = 8                 # アーチ節点間の分割数（偶数: A系が両�
 T_LONG = 5.0              # アーチ縦材 断面（角材）
 T_TRANS = 3.0             # アーチ横材 断面（角材）
 OVERHANG = 3.0            # 縦材の端部節点からの突き出し
-ROWS_A = (-30.0, 30.0)    # A系縦材の幅方向位置 z
-ROWS_B = (-10.0, 10.0)    # B系縦材の幅方向位置 z
-TRANS_LEN = 90.0          # 横材の長さ
+RIB_Z = 56.0              # リブ中心の幅方向位置 ±z
+RIB_ROWS = (("A", -7.0), ("B", 0.0), ("A", 7.0))  # リブ内の縦材配置（リブ中心からの z）
+RIB_T_HALF = 11.0         # リブ横材の半長（リブ中心から）
 DECK_W = 90.0             # 床版（厚紙）幅
 DECK_T = 0.5              # 床版（厚紙）厚
-STRINGER = 5.0            # 床版縦桁 断面（角材）
-STRINGER_Z = 40.0         # 床版縦桁の幅方向位置 ±z
-POST = 4.0                # 鉛直材 断面（角材）
+STRINGER = 5.0            # 床版縦桁（タイ）断面（角材）
+CROSS = 5.0               # 床版横桁 断面（角材）
+LOAD_BEAM = (5.0, 15.0)   # 載荷点直近の横桁（幅, 高さ: 5×15 縦使い）
+HANGER = 0.5              # 釣り糸ハンガー（表示用の太さ）
 RHO_BALSA = 0.16e-3       # g/mm3（バルサ密度の仮定値）
 RHO_PAPER = 0.70e-3       # g/mm3（厚紙密度の仮定値）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(HERE, "..", "work")
+LOADS = (SPAN / 2 - LOAD_PITCH / 2, SPAN / 2 + LOAD_PITCH / 2)
 
 
 # ---------------------------------------------------------------- 幾何
@@ -68,11 +73,20 @@ def solve_arch(n_seg, t_long, t_trans):
 
 R, ALPHA, DELTA, CHORD, RISE = solve_arch(N_SEG, T_LONG, T_TRANS)
 THETA = math.asin(SPAN / 2 / R)
-Y_C = -R * math.cos(THETA) + T_TRANS / 2  # 節点円の中心 y（横材T0の下面を支点上面 y=0 に合わせる）
 
 
 def phi(i):
     return -THETA + i * ALPHA
+
+
+def tbar_half_height(i):
+    """節点 i の横材（断面を節点の半径方向に向けた角材）の鉛直方向の半高さ。"""
+    a = phi(i)
+    return T_TRANS / 2 * (abs(math.cos(a)) + abs(math.sin(a)))
+
+
+# 端部の横材 T0 が床版縦桁の上面に載るように節点円の中心高さを決める
+Y_C = STRINGER + tbar_half_height(0) - R * math.cos(THETA)
 
 
 def pt(r, i):
@@ -127,8 +141,17 @@ class Box:
     def center(self):
         return mul(add(self.p0, self.p1), 0.5)
 
-    def ymax(self):
-        return max(c[1] for c in self.corners)
+    def lo(self, k):
+        return min(c[k] for c in self.corners)
+
+    def hi(self, k):
+        return max(c[k] for c in self.corners)
+
+    def edges(self):
+        for i in range(8):
+            for bit in (1, 2, 4):
+                if not i & bit:
+                    yield self.corners[i], self.corners[i | bit]
 
     def triangles(self):
         c = self.corners
@@ -148,131 +171,163 @@ class Box:
         return tris
 
 
+def balsa(s):
+    return "バルサ {:g}mm角".format(s) if isinstance(s, float) else "バルサ {:g}×{:g}".format(*s)
+
+
+def split(start, end, nodes):
+    """start〜end を節点位置で継ぎ、各片を MAX_MEMBER 以下にする。"""
+    cuts = [start]
+    while end - cuts[-1] > MAX_MEMBER:
+        cand = [x for x in nodes if cuts[-1] < x <= cuts[-1] + MAX_MEMBER]
+        if not cand:
+            raise SystemExit("%g〜%g を %g mm 以下に分割できません" % (start, end, MAX_MEMBER))
+        cuts.append(max(cand))
+    cuts.append(end)
+    return cuts
+
+
 def build():
     boxes = []
-    balsa = lambda s: "バルサ {:g}mm角".format(s)
+    xs = [pt(R, i)[0] for i in range(N_SEG + 1)]
+    deck_top = STRINGER + DECK_T
 
-    # アーチ縦材: 端部節点では横材の上（R+δ）、中央節点では横材の下を通る
-    def longitudinal(mark, label, i0, i1, rows):
+    # ---- アーチリブ: 縦材は端部節点で横材の上、中央節点で横材の下を通る
+    def longitudinal(mark, label, i0, i1, family):
         a, b = pt(R + DELTA, i0), pt(R + DELTA, i1)
         d = norm(sub(b, a))
         a = sub(a, mul(d, OVERHANG))
         b = add(b, mul(d, OVERHANG))
-        for z in rows:
-            boxes.append(Box(mark, label, mark, balsa(T_LONG), (a[0], a[1], z), (b[0], b[1], z),
-                             (-d[1], d[0], 0.0), T_LONG, T_LONG, RHO_BALSA))
+        for side in (-1, 1):
+            for fam, dz in RIB_ROWS:
+                if fam != family:
+                    continue
+                z = side * RIB_Z + dz
+                boxes.append(Box(mark, label, mark, balsa(T_LONG), (a[0], a[1], z), (b[0], b[1], z),
+                                 (-d[1], d[0], 0.0), T_LONG, T_LONG, RHO_BALSA))
 
     for n, k in enumerate(range(0, N_SEG, 2)):
-        longitudinal("A", "A%d" % (n + 1), k, k + 2, ROWS_A)
+        longitudinal("A", "A%d" % (n + 1), k, k + 2, "A")
     for n, k in enumerate(range(1, N_SEG - 1, 2)):
-        longitudinal("B", "B%d" % (n + 1), k, k + 2, ROWS_B)
-    longitudinal("BS", "BS", 0, 1, ROWS_B)          # B系の端部短材
-    longitudinal("BS", "BS", N_SEG - 1, N_SEG, ROWS_B)
+        longitudinal("B", "B%d" % (n + 1), k, k + 2, "B")
+    longitudinal("BS", "BS", 0, 1, "B")          # B系の端部短材
+    longitudinal("BS", "BS", N_SEG - 1, N_SEG, "B")
 
-    # アーチ横材
+    # ---- 横材: 床版上の有効空間（高さ CLEAR_MIN）より上にある節点だけ全幅で両リブをつなぐ
+    full_nodes = []
     for i in range(N_SEG + 1):
         x, y = pt(R, i)
         a = phi(i)
-        boxes.append(Box("T", "T%d" % i, "T", balsa(T_TRANS), (x, y, -TRANS_LEN / 2), (x, y, TRANS_LEN / 2),
-                         (math.sin(a), math.cos(a), 0.0), T_TRANS, T_TRANS, RHO_BALSA))
+        v = (math.sin(a), math.cos(a), 0.0)
+        if y - tbar_half_height(i) >= deck_top + CLEAR_MIN:
+            full_nodes.append(i)
+            zz = RIB_Z + RIB_T_HALF
+            boxes.append(Box("TW", "T%d" % i, "T", balsa(T_TRANS), (x, y, -zz), (x, y, zz),
+                             v, T_TRANS, T_TRANS, RHO_BALSA))
+        else:
+            for side in (-1, 1):
+                zc = side * RIB_Z
+                boxes.append(Box("T", "T%d" % i, "T", balsa(T_TRANS), (x, y, zc - RIB_T_HALF),
+                                 (x, y, zc + RIB_T_HALF), v, T_TRANS, T_TRANS, RHO_BALSA))
 
-    arch_top = max(b.ymax() for b in boxes if b.kind in ("A", "B", "BS"))
-    trans_top = max(b.ymax() for b in boxes if b.kind == "T")
-    plate_bot = max(arch_top, trans_top + STRINGER)
-    str_bot = plate_bot - STRINGER
-
-    # 鉛直材（横材の端部上 → 床版縦桁下面）
-    for i in range(N_SEG + 1):
-        tb = [b for b in boxes if b.label == "T%d" % i][0]
-        bottom = tb.ymax()
-        if str_bot - bottom < 2.0:
-            continue  # 縦桁が横材に直接（または厚紙スペーサを介して）載る
-        x = pt(R, i)[0]
-        for z in (-STRINGER_Z, STRINGER_Z):
-            boxes.append(Box("P%d" % min(i, N_SEG - i), "P%d" % i, "P", balsa(POST),
-                             (x, bottom, z), (x, str_bot, z), (1.0, 0.0, 0.0), POST, POST, RHO_BALSA))
-
-    # 床版縦桁・床版（厚紙）: 節点位置で継ぎ、各片を MAX_MEMBER 以下にする
-    xs = [pt(R, i)[0] for i in range(N_SEG + 1)]
-    start, end = xs[0] - POST / 2, xs[-1] + POST / 2
-    cuts = [start]
-    while end - cuts[-1] > MAX_MEMBER:
-        cand = [x for x in xs[1:-1] if cuts[-1] < x <= cuts[-1] + MAX_MEMBER]
-        if not cand:
-            raise SystemExit("床版縦桁を %g mm 以下に分割できません" % MAX_MEMBER)
-        cuts.append(max(cand))
-    cuts.append(end)
-    n_piece = len(cuts) - 1
-    for k in range(n_piece):
-        sym = min(k, n_piece - 1 - k) + 1
-        x0, x1 = cuts[k], cuts[k + 1]
-        for z in (-STRINGER_Z, STRINGER_Z):
+    # ---- 床版縦桁（タイ）: 下面 y=0 で三角支点に載る。節点位置で継ぐ
+    rib = [b for b in boxes if b.kind in ("A", "B", "BS", "T")]
+    s0, s1 = min(b.lo(0) for b in rib) - 1, max(b.hi(0) for b in rib) + 1
+    cuts_s = split(s0, s1, xs[1:-1])
+    for k in range(len(cuts_s) - 1):
+        sym = min(k, len(cuts_s) - 2 - k) + 1
+        for side in (-1, 1):
             boxes.append(Box("S%d" % sym, "S%d" % (k + 1), "S", balsa(STRINGER),
-                             (x0, str_bot + STRINGER / 2, z), (x1, str_bot + STRINGER / 2, z),
+                             (cuts_s[k], STRINGER / 2, side * RIB_Z), (cuts_s[k + 1], STRINGER / 2, side * RIB_Z),
                              (0.0, 1.0, 0.0), STRINGER, STRINGER, RHO_BALSA))
+
+    # ---- 床版横桁: 縦桁の内側に突き付け。上面を縦桁上面にそろえる。載荷点直近は 5×15 縦使い
+    load_nodes = set(min(range(1, N_SEG), key=lambda i: abs(xs[i] - x)) for x in LOADS)
+    zin = RIB_Z - STRINGER / 2
+    for i in range(N_SEG + 1):
+        if i in load_nodes:
+            w, h = LOAD_BEAM
+            mark, mat = "CL", balsa(LOAD_BEAM)
+        else:
+            w = h = CROSS
+            mark, mat = ("CE" if i in (0, N_SEG) else "C"), balsa(CROSS)
+        yc = STRINGER - h / 2
+        boxes.append(Box(mark, "C%d" % i, "C", mat, (xs[i], yc, -zin), (xs[i], yc, zin),
+                         (0.0, 1.0, 0.0), h, w, RHO_BALSA))
+
+    # ---- 釣り糸ハンガー: リブ節点の最下部（リブ中心）→ 縦桁上面
+    for i in range(1, N_SEG):
+        if i % 2 == 0:   # 偶数節点: B系縦材の中央部が横材の下を通る
+            top = pt(R - DELTA, i)[1] - T_LONG / 2
+        else:            # 奇数節点: 横材が最下部
+            top = pt(R, i)[1] - tbar_half_height(i)
+        for side in (-1, 1):
+            boxes.append(Box("H", "H%d" % i, "H", "釣り糸", (xs[i], STRINGER, side * RIB_Z),
+                             (xs[i], top, side * RIB_Z), (1.0, 0.0, 0.0), HANGER, HANGER, 0.0))
+
+    # ---- 床版（厚紙）
+    d0, d1 = xs[0] - CROSS / 2, xs[-1] + CROSS / 2
+    cuts_d = split(d0, d1, xs[1:-1])
+    for k in range(len(cuts_d) - 1):
+        sym = min(k, len(cuts_d) - 2 - k) + 1
         boxes.append(Box("D%d" % sym, "D%d" % (k + 1), "D", "厚紙 t={:g}".format(DECK_T),
-                         (x0, plate_bot + DECK_T / 2, 0.0), (x1, plate_bot + DECK_T / 2, 0.0),
+                         (cuts_d[k], STRINGER + DECK_T / 2, 0.0), (cuts_d[k + 1], STRINGER + DECK_T / 2, 0.0),
                          (0.0, 1.0, 0.0), DECK_T, DECK_W, RHO_PAPER))
 
-    levels = dict(arch_top=arch_top, trans_top=trans_top, plate_bot=plate_bot,
-                  str_bot=str_bot, deck_top=plate_bot + DECK_T, cuts=cuts)
-    return boxes, levels
+    lv = dict(deck_top=deck_top, cuts_s=cuts_s, cuts_d=cuts_d, full_nodes=full_nodes,
+              load_nodes=sorted(load_nodes), xs=xs)
+    return boxes, lv
 
 
 # ---------------------------------------------------------------- 照査
 def checks(boxes, lv):
     res = []
-    xs = [pt(R, i)[0] for i in range(N_SEG + 1)]
-    res.append(("支間 = %g mm" % SPAN, abs(xs[-1] - xs[0] - SPAN) < 1e-6, "%.1f mm" % (xs[-1] - xs[0])))
-    longest = max(boxes, key=lambda b: b.length)
-    res.append(("一部材の長さ ≤ %g mm" % MAX_MEMBER, longest.length <= MAX_MEMBER,
+    xs = lv["xs"]
+    res.append(("支間 = %g mm（節点T0・T%d が支点直上）" % (SPAN, N_SEG), abs(xs[-1] - xs[0] - SPAN) < 1e-6,
+                "%.1f mm" % (xs[-1] - xs[0])))
+    solid = [b for b in boxes if b.kind != "H"]
+    longest = max(solid, key=lambda b: b.length)
+    res.append(("一部材の長さ ≤ %g mm（釣り糸を除く）" % MAX_MEMBER, longest.length <= MAX_MEMBER,
                 "最大 %.1f mm（%s, 余裕 %.1f mm）" % (longest.length, longest.mark, MAX_MEMBER - longest.length)))
-    res.append(("床版有効幅 ≥ %g mm" % DECK_W_MIN, DECK_W >= DECK_W_MIN, "%g mm" % DECK_W))
-    above = [b for b in boxes if b.kind != "D" and min(c[1] for c in b.corners) > lv["deck_top"] - 1e-6]
-    res.append(("床版上有効高さ ≥ %g mm" % CLEAR_MIN, not above, "上路式のため床版上に部材なし"))
-    loads = (SPAN / 2 - LOAD_PITCH / 2, SPAN / 2 + LOAD_PITCH / 2)
-    on_deck = all(lv["cuts"][0] <= x <= lv["cuts"][-1] for x in loads)
-    res.append(("載荷点が床版上", on_deck, "x = %g, %g mm" % loads))
-    # 中央（z=0）から錘を吊る場合に吊り糸が横材と干渉しないか
-    slot = min(abs(z) for z in ROWS_A + ROWS_B) * 2 - T_LONG
-    gaps = []
-    for x in loads:
-        g = []
-        for b in boxes:
-            if b.kind != "T":
-                continue
-            lo, hi = min(c[0] for c in b.corners), max(c[0] for c in b.corners)
-            g.append(0.0 if lo <= x <= hi else min(abs(x - lo), abs(x - hi)))
-        gaps.append(min(g))
-    res.append(("中央吊り（z=0）時の吊り糸と横材の離れ", min(gaps) >= 2.0,
-                "最小 %.1f mm（縦材間スリット幅 %.0f mm）" % (min(gaps), slot)))
-    side = TRANS_LEN / 2
-    res.append(("側方吊り（|z| > %g）時の干渉" % side, max(DECK_W, TRANS_LEN) / 2 <= side + 1e-6,
-                "床版・横材とも |z| ≤ %g mm" % side))
-    return res, loads
+    inner = RIB_Z - RIB_T_HALF
+    clear_w = min(DECK_W, 2 * inner)
+    res.append(("床版有効幅 ≥ %g mm" % DECK_W_MIN, clear_w >= DECK_W_MIN,
+                "床版幅 %g、リブ内側の純幅 %g mm" % (DECK_W, 2 * inner)))
+    # 床版上の有効空間（幅 DECK_W_MIN × 高さ CLEAR_MIN × 支間）に部材が入らないか
+    zl, yl = DECK_W_MIN / 2, lv["deck_top"]
+    hit = [b for b in boxes if b.kind != "D" and b.lo(2) < zl and b.hi(2) > -zl
+           and b.lo(1) < yl + CLEAR_MIN and b.hi(1) > yl and b.lo(0) < SPAN and b.hi(0) > 0]
+    over = [b.lo(1) - yl for b in boxes if b.mark == "TW"]
+    res.append(("床版上有効高さ ≥ %g mm" % CLEAR_MIN, not hit,
+                "全幅横材の下端まで最小 %.1f mm（全幅横材は T%s）"
+                % (min(over), "・T".join(str(i) for i in lv["full_nodes"]))))
+    near = [b for b in boxes if b.lo(0) < 15 and b.hi(0) > -15 or b.lo(0) < SPAN + 15 and b.hi(0) > SPAN - 15]
+    low = min(b.lo(1) for b in near)
+    res.append(("支点付近（±15 mm）で支点頂部より下に部材なし", low >= -1e-6,
+                "最下面 y = %.1f mm（縦桁・端横桁の下面が支点頂部に線接触）" % low))
+    on_deck = all(lv["cuts_d"][0] <= x <= lv["cuts_d"][-1] for x in LOADS)
+    gaps = ["x=%g→横桁C%d %.1f mm" % (x, i, abs(x - lv["xs"][i])) for x, i in zip(LOADS, lv["load_nodes"])]
+    res.append(("載荷点が床版上・直近の横桁", on_deck, "、".join(gaps)))
+    return res
 
 
 def bom(boxes):
     groups = OrderedDict()
     for b in boxes:
         groups.setdefault((b.mark, b.material, round(b.length, 1)), []).append(b)
-    rows = []
-    for (mark, mat, length), items in groups.items():
-        rows.append((mark, mat, length, len(items), sum(b.mass for b in items)))
-    return rows
+    return [(mark, mat, length, len(items), sum(b.mass for b in items))
+            for (mark, mat, length), items in groups.items()]
 
 
 # ---------------------------------------------------------------- STL
 def write_stl(boxes, path):
     lines = ["solid davinci_arch_bridge"]
+    sw = lambda p: (p[0], p[2], p[1])  # (x, z, y) → Z 上向き
     for b in boxes:
         for n, *vs in b.triangles():
-            sw = lambda p: (p[0], p[2], p[1])  # (x, z, y) → Z 上向き
-            n = sw(n)
             vs = [sw(p) for p in vs]
-            # 軸の入替えで向きが反転するので頂点順も入れ替える
-            vs = [vs[0], vs[2], vs[1]]
-            lines.append("  facet normal %.6e %.6e %.6e" % n)
+            vs = [vs[0], vs[2], vs[1]]  # 軸の入替えで向きが反転するので頂点順も入れ替える
+            lines.append("  facet normal %.6e %.6e %.6e" % sw(n))
             lines.append("    outer loop")
             for p in vs:
                 lines.append("      vertex %.4f %.4f %.4f" % p)
@@ -302,6 +357,17 @@ def hull(pts):
             upper.pop()
         upper.append(p)
     return lower[:-1] + upper[:-1]
+
+
+def cut_x(box, x):
+    """部材を平面 x = 一定 で切った断面の (z, y) 多角形。交差しなければ None。"""
+    pts = []
+    for a, b in box.edges():
+        if (a[0] - x) * (b[0] - x) <= 0 and a[0] != b[0]:
+            t = (x - a[0]) / (b[0] - a[0])
+            p = add(a, mul(sub(b, a), t))
+            pts.append((p[2], p[1]))
+    return hull(pts) if len(pts) >= 3 else None
 
 
 def esc(s):
@@ -361,17 +427,18 @@ class Sheet:
   .B  { fill: #d1493f; fill-opacity: 0.55; stroke: #8e231c; stroke-width: 0.35; }
   .BS { fill: #e8968f; fill-opacity: 0.65; stroke: #8e231c; stroke-width: 0.35; }
   .T  { fill: #f0b429; stroke: #8a6100; stroke-width: 0.3; }
-  .P  { fill: #9aa0a6; fill-opacity: 0.7; stroke: #4a4f54; stroke-width: 0.3; }
-  .S  { fill: #b78a5b; fill-opacity: 0.75; stroke: #6b4a26; stroke-width: 0.3; }
+  .H  { fill: #2e7d32; stroke: #2e7d32; stroke-width: 0.4; }
+  .S  { fill: #b78a5b; fill-opacity: 0.8; stroke: #6b4a26; stroke-width: 0.3; }
+  .C  { fill: #8d6e63; fill-opacity: 0.8; stroke: #4e342e; stroke-width: 0.3; }
   .D  { fill: #e9dcc3; stroke: #7a6a4a; stroke-width: 0.3; }
   .deckhidden { fill: none; stroke: #7a6a4a; stroke-width: 0.35; stroke-dasharray: 3 1.5; }
-  .ground { fill: #d9d9d9; stroke: #555; stroke-width: 0.4; }
+  .env { fill: #2e7d32; fill-opacity: 0.06; stroke: #2e7d32; stroke-width: 0.35; stroke-dasharray: 2 1.5; }
+  .support { fill: #d9d9d9; stroke: #555; stroke-width: 0.4; }
   .cl { stroke: #555; stroke-width: 0.3; stroke-dasharray: 8 2 1.5 2; fill: none; }
   .dim { stroke: #444; stroke-width: 0.25; fill: none; }
   .dimtick { stroke: #444; stroke-width: 0.5; }
   .load { stroke: #c62828; stroke-width: 0.7; fill: none; }
-  .thrust { stroke: #2e7d32; stroke-width: 0.7; fill: none; }
-  .loadtxt { fill: #c62828; }
+  .loadtxt { fill: #c62828; } .envtxt { fill: #2e7d32; }
   .ok { fill: #2e7d32; } .ng { fill: #c62828; }
   .tblh { fill: #eee; stroke: #222; stroke-width: 0.3; }
 """
@@ -382,181 +449,146 @@ class Sheet:
         return head + "<style>" + style + "</style>\n" + defs + "\n".join(self.items) + "\n</svg>\n"
 
 
-ORDER = {"D": 0, "S": 1, "P": 2, "T": 3, "B": 4, "BS": 4, "A": 5}
+ORDER = {"D": 0, "C": 1, "S": 2, "H": 3, "T": 4, "B": 5, "BS": 5, "A": 6}
+LEGEND = (("A", "A系縦材（偶数節点を結ぶ・リブ外側2列）"), ("B", "B系縦材（奇数節点を結ぶ・リブ中央）"),
+          ("BS", "B系端部短材"), ("T", "横材（高い節点は全幅で両リブを連結）"), ("H", "釣り糸ハンガー"),
+          ("S", "床版縦桁＝タイ（アーチの水平力を受ける）"), ("C", "床版横桁（載荷点直近は5×15縦使い）"),
+          ("D", "床版（厚紙）"))
 
 
-def draw(boxes, lv, chk, loads, rows):
-    sh = Sheet(900, 800)
-    sh.rect(0, 0, 900, 800, "bg")
-    sh.rect(10, 10, 880, 780, "frame")
-    sh.text(30, 32, "ダビンチアーチ橋（上路式）一般図 — 簡易下書き", 11)
-    sh.text(30, 43, "単位: mm ／ SVG座標 1単位 = 1mm（断面図のみ2倍）／ AutoCAD 作図前の検討用", 5.5)
-
+def draw(boxes, lv, chk, rows):
+    sh = Sheet(900, 830)
+    sh.rect(0, 0, 900, 830, "bg")
+    sh.rect(10, 10, 880, 810, "frame")
+    sh.text(30, 32, "ダビンチアーチ橋（下路式・タイドアーチ）一般図 — 簡易下書き", 11)
+    sh.text(30, 43, "単位: mm ／ SVG座標 1単位 = 1mm（断面図のみ1.5倍）／ AutoCAD 作図前の検討用", 5.5)
     draw_order = sorted(boxes, key=lambda b: ORDER[b.kind])
+    deck_top = lv["deck_top"]
+    crown = pt(R, N_SEG // 2)
 
     # ---- 側面図
-    ox, oy = 80.0, 245.0
+    ox, oy = 80.0, 235.0
     S = lambda x, y: (ox + x, oy - y)
-    sh.text(ox + SPAN / 2, 62, "側面図", 8, "middle")
-    for x0 in (-45.0, SPAN):
-        sh.rect(ox + x0, oy, 45, 25, "ground")
-    sh.line(ox + SPAN / 2, oy + 30, ox + SPAN / 2, oy - lv["deck_top"] - 30, "cl")
-    sh.text(ox + SPAN / 2 + 2, oy - lv["deck_top"] - 26, "CL", 5)
+    sh.text(ox + SPAN / 2, 58, "側面図", 8, "middle")
+    for x0 in (0.0, SPAN):
+        sh.poly([S(x0, 0), S(x0 - 9, -16), S(x0 + 9, -16)], "support")
+    sh.line(ox + SPAN / 2, oy + 25, ox + SPAN / 2, oy - crown[1] - 20, "cl")
+    sh.text(ox + SPAN / 2 - 2, oy - crown[1] - 16, "CL", 5, "end")
     for b in draw_order:
         sh.poly([S(x, y) for x, y in hull([(c[0], c[1]) for c in b.corners])], b.kind)
-    # 部材記号
-    for b in boxes:
-        if b.kind in ("A", "B", "BS") and b.p0[2] > 0:
+    for b in boxes:   # 部材記号（手前のリブ・リブ中心側の列のみ）
+        if b.kind in ("A", "B", "BS") and abs(b.p0[2] - (RIB_Z + (7 if b.kind == "A" else 0))) < 1e-6:
             mx, my = (b.p0[0] + b.p1[0]) / 2, (b.p0[1] + b.p1[1]) / 2
-            a = math.atan2(mx - SPAN / 2, my - Y_C)
-            off = 10 if b.kind == "A" else -9
-            p = S(mx + off * math.sin(a) * 0.4, my + off * math.cos(a))
-            if b.kind != "A":
-                p = S(mx, my - 12)
-            sh.text(p[0], p[1], b.label, 4.5, "middle", "")
+            p = S(mx, my + 9) if b.kind == "A" else S(mx, my - 12)
+            sh.text(p[0], p[1], b.label, 4.5, "middle")
     for i in range(N_SEG + 1):
         x, y = pt(R, i)
         p = S(x, y)
-        sh.text(p[0] + (4 if x < SPAN / 2 else -4), p[1] + 7, "T%d" % i, 3.8,
-                "start" if x < SPAN / 2 else "end")
-    # 載荷
-    for x in loads:
-        sh.arrow(ox + x, oy - lv["deck_top"] - 22, ox + x, oy - lv["deck_top"] - 0.8)
-        sh.text(ox + x, oy - lv["deck_top"] - 24, "P/2", 5, "middle", "loadtxt")
-    yd = oy - lv["deck_top"] - 32
-    sh.dim_h(ox, ox + loads[0], yd, "%g" % loads[0])
-    sh.dim_h(ox + loads[0], ox + loads[1], yd, "%g（載荷間隔）" % LOAD_PITCH)
-    sh.dim_h(ox + loads[1], ox + SPAN, yd, "%g" % (SPAN - loads[1]))
-    # 水平反力（スパン外アンカー）
-    sh.add('<line class="thrust" x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" marker-end="url(#ah)"/>'
-           % (ox - 40, oy - 4, ox - 6, oy - 4))
-    sh.add('<line class="thrust" x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" marker-end="url(#ah)"/>'
-           % (ox + SPAN + 40, oy - 4, ox + SPAN + 6, oy - 4))
-    sh.text(ox - 43, oy + 31, "→ 水平反力はスパン外アンカーで受ける ←", 4.2)
-    # 寸法
-    sh.dim_h(ox, ox + SPAN, oy + 38, "支間 %g" % SPAN, ext=(oy + 2, oy + 2))
-    sh.dim_v(ox - 52, oy, oy - lv["deck_top"], "床版上面 %.1f" % lv["deck_top"], ext=(ox - 45, ox - 2))
-    crown = pt(R, N_SEG // 2)
-    sh.dim_v(ox + SPAN + 55, oy, oy - crown[1], "節点ライズ %.1f" % crown[1],
-             ext=(ox + SPAN + 45, ox + SPAN / 2 + 8))
-    # 断面位置
+        left = x < SPAN / 2
+        sh.text(p[0] + (4 if left else -4), p[1] + 7, "T%d" % i, 3.8, "start" if left else "end")
+    for x in LOADS:
+        sh.arrow(ox + x, oy - deck_top - 26, ox + x, oy - deck_top - 0.8)
+        sh.text(ox + x, oy - deck_top - 28, "P/2", 5, "middle", "loadtxt")
+    sh.line(ox, oy - deck_top - CLEAR_MIN, ox + SPAN, oy - deck_top - CLEAR_MIN, "deckhidden")
+    sh.text(ox + 4, oy - deck_top - CLEAR_MIN - 1.5, "床版上 有効高さ %g（幅 %g の範囲に部材なし）" % (CLEAR_MIN, DECK_W_MIN),
+            4, cls="envtxt")
+    yd = oy - crown[1] - 30
+    sh.dim_h(ox, ox + LOADS[0], yd, "%g" % LOADS[0])
+    sh.dim_h(ox + LOADS[0], ox + LOADS[1], yd, "%g（載荷間隔）" % LOAD_PITCH)
+    sh.dim_h(ox + LOADS[1], ox + SPAN, yd, "%g" % (SPAN - LOADS[1]))
+    sh.dim_h(ox, ox + SPAN, oy + 30, "支間 %g（三角支点の頂部間）" % SPAN, ext=(oy + 17, oy + 17))
+    sh.dim_v(ox + SPAN + 40, oy, oy - crown[1], "節点ライズ %.1f" % crown[1], ext=(ox + SPAN + 10, ox + SPAN / 2 + 8))
+    sh.dim_v(ox - 25, oy, oy - deck_top, "%.1f" % deck_top, ext=(ox - 12, ox - 12), size=4.2)
+    sh.text(ox - 30, oy - 12, "床版上面", 4.2, "end")
+    sh.text(ox - 12, oy + 25, "支点は鉛直反力のみ（水平力は縦桁タイで処理）", 4.2, "start")
     for name, i in (("A", N_SEG // 2), ("B", 1)):
-        x = ox + pt(R, i)[0] + (6 if name == "A" else 0)
-        for yy in (oy - lv["deck_top"] - 6, oy + 10):
+        x = ox + pt(R, i)[0] + (6 if name == "A" else 3)
+        for yy in (oy - crown[1] - 12, oy + 8):
             sh.line(x, yy, x, yy + 6, "frame")
-        sh.text(x + 1.5, oy - lv["deck_top"] - 7, name, 5)
-        sh.text(x + 1.5, oy + 22, name, 5)
+        sh.text(x + 1.5, oy - crown[1] - 13, name, 5)
+        sh.text(x + 1.5, oy + 18, name, 5)
 
-    # ---- 平面図（床版を除いて表示）
-    px, py = ox, 395.0
+    # ---- 平面図
+    px, py = ox, 375.0
     P = lambda x, z: (px + x, py - z)
-    sh.text(px + SPAN / 2, py - 62, "平面図（床版を取り除いて表示・破線＝床版外形）", 8, "middle")
+    sh.text(px + SPAN / 2, py - 78, "平面図（床版を取り除いて表示・破線＝床版外形）", 8, "middle")
     sh.line(px - 15, py, px + SPAN + 15, py, "cl")
     for b in draw_order:
-        if b.kind == "D":
-            continue
-        sh.poly([P(x, z) for x, z in hull([(c[0], c[2]) for c in b.corners])], b.kind)
-    c0, c1 = lv["cuts"][0], lv["cuts"][-1]
-    sh.rect(px + c0, py - DECK_W / 2, c1 - c0, DECK_W, "deckhidden")
-    for x in loads:
-        sh.line(px + x, py - DECK_W / 2 - 8, px + x, py + DECK_W / 2 + 4, "load")
-        sh.text(px + x, py - DECK_W / 2 - 10, "載荷線", 4.5, "middle", "loadtxt")
-    # 幅方向寸法
-    zs = [TRANS_LEN / 2, ROWS_A[1], ROWS_B[1], ROWS_B[0], ROWS_A[0], -TRANS_LEN / 2]
+        if b.kind != "D":
+            sh.poly([P(x, z) for x, z in hull([(c[0], c[2]) for c in b.corners])], b.kind)
+    d0, d1 = lv["cuts_d"][0], lv["cuts_d"][-1]
+    sh.rect(px + d0, py - DECK_W / 2, d1 - d0, DECK_W, "deckhidden")
+    for x in LOADS:
+        sh.line(px + x, py - DECK_W / 2, px + x, py + DECK_W / 2, "load")
+        sh.text(px + x, py - 2, "載荷線", 4.2, "middle", "loadtxt")
+    zt = RIB_Z + RIB_T_HALF
+    zs = [zt, RIB_Z + 7, RIB_Z, RIB_Z - 7, RIB_Z - RIB_T_HALF, -(RIB_Z - RIB_T_HALF)]
     for a, b in zip(zs, zs[1:]):
-        sh.dim_v(px + SPAN + 30, py - a, py - b, "%g" % (a - b), size=4.5)
-    sh.dim_v(px + SPAN + 45, py - DECK_W / 2, py + DECK_W / 2, "床版幅 %g（有効幅≧%g）" % (DECK_W, DECK_W_MIN),
-             size=4.5)
-    for z, name in ((ROWS_A[1], "A系"), (ROWS_B[1], "B系"), (STRINGER_Z, "縦桁・鉛直材")):
-        sh.text(px - 10, py - z + 1.5, name, 4, "end")
-    # 節点間隔
-    xs = [pt(R, i)[0] for i in range(N_SEG + 1)]
+        sh.dim_v(px + SPAN + 28, py - a, py - b, "%g" % (a - b), size=4.2)
+    sh.dim_v(px + SPAN + 42, py - DECK_W / 2, py + DECK_W / 2, "床版幅 %g（有効幅≧%g）" % (DECK_W, DECK_W_MIN),
+             size=4.2)
+    sh.dim_v(px + SPAN + 56, py - zt, py + zt, "全幅 %g" % (2 * zt), size=4.2)
+    for z, name in ((RIB_Z, "リブ"), (0.0, "床版")):
+        sh.text(px - 12, py - z + 1.5, name, 4, "end")
+    xs = lv["xs"]
     for a, b in zip(xs, xs[1:]):
-        sh.dim_h(px + a, px + b, py + DECK_W / 2 + 16, "%.1f" % (b - a), ext=(py + 46, py + 46), size=4.2)
-    sh.text(px + SPAN / 2, py + DECK_W / 2 + 26, "節点（横材）の水平間隔", 4.5, "middle")
-    # 床版継手
-    for x in lv["cuts"][1:-1]:
-        sh.text(px + x, py + DECK_W / 2 + 4.5, "継手", 3.6, "middle")
+        sh.dim_h(px + a, px + b, py + zt + 14, "%.1f" % (b - a), ext=(py + zt + 2, py + zt + 2), size=4.2)
+    sh.text(px + SPAN / 2, py + zt + 24, "節点（横材・ハンガー・横桁）の水平間隔", 4.5, "middle")
 
-    # ---- 断面図（2倍）
-    def section(cx, base_y, i, title):
-        k = 2.0
-        ys = []
-        rects = []  # (kind, z0, z1, y0, y1)
-        rects.append(("D", -DECK_W / 2, DECK_W / 2, lv["plate_bot"], lv["deck_top"]))
-        for z in (-STRINGER_Z, STRINGER_Z):
-            rects.append(("S", z - STRINGER / 2, z + STRINGER / 2, lv["str_bot"], lv["plate_bot"]))
-        tc = pt(R, i)[1]
-        rects.append(("T", -TRANS_LEN / 2, TRANS_LEN / 2, tc - T_TRANS / 2, tc + T_TRANS / 2))
-        ends, mids = (ROWS_A, ROWS_B) if i % 2 == 0 else (ROWS_B, ROWS_A)
-        ye = pt(R + DELTA, i)[1]
-        for z in ends:
-            rects.append(("A" if ends is ROWS_A else "B", z - T_LONG / 2, z + T_LONG / 2,
-                          ye - T_LONG / 2, ye + T_LONG / 2))
-        if 0 < i < N_SEG:
-            ym = pt(R - DELTA, i)[1]
-            for z in mids:
-                rects.append(("A" if mids is ROWS_A else "B", z - T_LONG / 2, z + T_LONG / 2,
-                              ym - T_LONG / 2, ym + T_LONG / 2))
-        posts = [b for b in boxes if b.label == "P%d" % i]
-        for b in posts:
-            z = b.p0[2]
-            rects.append(("P", z - POST / 2, z + POST / 2, b.p0[1], b.p1[1]))
-        y_lo = min(r[3] for r in rects) - 2
-        Q = lambda z, y: (cx + k * z, base_y - k * (y - y_lo))
-        for kind, z0, z1, y0, y1 in sorted(rects, key=lambda r: ORDER[r[0]]):
-            a, b = Q(z0, y1), Q(z1, y0)
-            sh.rect(a[0], a[1], b[0] - a[0], b[1] - a[1], kind)
-        top = Q(0, lv["deck_top"])[1]
-        sh.text(cx, top - 22, title, 7, "middle")
-        sh.dim_h(cx - k * DECK_W / 2, cx + k * DECK_W / 2, top - 6, "床版幅 %g" % DECK_W, size=4.5)
-        sh.line(cx, top - 2, cx, base_y + 4, "cl")
-        lbl = "A系" if ends is ROWS_A else "B系"
-        p = Q(TRANS_LEN / 2 + 1, ye)
-        sh.text(p[0], p[1] - 3, "%s端部（横材の上）" % lbl, 3.8)
-        if 0 < i < N_SEG:
-            lbl2 = "B系" if ends is ROWS_A else "A系"
-            p = Q(TRANS_LEN / 2 + 1, ym)
-            sh.text(p[0], p[1] + 5, "%s中央部（横材の下）" % lbl2, 3.8)
-        p = Q(TRANS_LEN / 2 + 1, tc)
-        sh.text(p[0], p[1] + 1.5, "横材T%d" % i, 3.8)
-        return base_y
+    # ---- 断面図（1.5倍、平面 x = 節点位置 で切断）
+    def section(cx, top_y, i, title):
+        k = 1.5
+        xcut = xs[i] + 0.01
+        polys = [(b.kind, cut_x(b, xcut)) for b in draw_order]
+        polys = [(kd, pg) for kd, pg in polys if pg]
+        y_hi = max(max(p[1] for p in pg) for _, pg in polys)
+        y_hi = max(y_hi, deck_top + CLEAR_MIN)
+        Q = lambda z, y: (cx + k * z, top_y + k * (y_hi - y))
+        a, b = Q(-DECK_W_MIN / 2, deck_top + CLEAR_MIN), Q(DECK_W_MIN / 2, deck_top)
+        sh.rect(a[0], a[1], b[0] - a[0], b[1] - a[1], "env")
+        sh.text(cx, a[1] + 6, "有効空間 %g×%g" % (DECK_W_MIN, CLEAR_MIN), 4, "middle", "envtxt")
+        for kd, pg in polys:
+            sh.poly([Q(z, y) for z, y in pg], kd)
+        y_lo = min(min(p[1] for p in pg) for _, pg in polys)
+        sh.line(cx, top_y - 3, cx, Q(0, y_lo)[1] + 4, "cl")
+        sh.text(cx, top_y - 12, title, 7, "middle")
+        zt_ = RIB_Z + RIB_T_HALF
+        sh.dim_h(Q(-zt_, 0)[0], Q(zt_, 0)[0], Q(0, y_lo)[1] + 10, "全幅 %g" % (2 * zt_), size=4.2)
+        return Q(0, y_lo)[1] + 10
 
-    section(735, 235, 1, "断面B-B（節点T1・2倍）")
-    section(735, 330, N_SEG // 2, "断面A-A（クラウンT%d・2倍）" % (N_SEG // 2))
-    # 凡例
-    lx, ly = 650, 360
-    for n, (kind, name) in enumerate((("A", "A系縦材（偶数節点を結ぶ）"), ("B", "B系縦材（奇数節点を結ぶ）"),
-                                      ("BS", "B系端部短材"), ("T", "横材"), ("P", "鉛直材"),
-                                      ("S", "床版縦桁"), ("D", "床版（厚紙）"))):
+    section(760, 85, 1, "断面B-B（節点T1）")
+    section(760, 270, N_SEG // 2, "断面A-A（クラウンT%d）" % (N_SEG // 2))
+    lx, ly = 640, 520
+    for n, (kind, name) in enumerate(LEGEND):
         sh.rect(lx, ly + n * 8, 8, 5, kind)
-        sh.text(lx + 11, ly + n * 8 + 4.3, name, 4.5)
+        sh.text(lx + 11, ly + n * 8 + 4.3, name, 4.4)
 
-    # ---- 照査
-    tx, ty = 30, 505
+    # ---- 照査・幾何
+    tx, ty = 30, 485
     sh.text(tx, ty, "ルール照査（自動計算）", 7)
     for n, (name, ok, val) in enumerate(chk):
-        y = ty + 10 + n * 8
+        y = ty + 10 + n * 15
         sh.text(tx, y, "OK" if ok else "NG", 5, cls="ok" if ok else "ng")
-        sh.text(tx + 12, y, "%s：%s" % (name, val), 4.6)
-    gy = ty + 10 + len(chk) * 8 + 8
+        sh.text(tx + 12, y, name, 4.6)
+        sh.text(tx + 12, y + 6, val, 4.2)
+    gy = ty + 10 + len(chk) * 15 + 6
     sh.text(tx, gy, "幾何（ダビンチアーチの自立条件 cosα=(R−δ)/(R+δ)）", 7)
     geo = ["分割数 n = %d、δ = (縦材+横材)/2 = %.1f mm" % (N_SEG, DELTA),
            "節点円半径 R = %.1f mm、節点角 α = %.2f°" % (R, math.degrees(ALPHA)),
            "縦材の節点間距離 = %.1f mm（＋突き出し %g×2）" % (CHORD, OVERHANG),
-           "節点ライズ = %.1f mm、床版上面高さ = %.1f mm" % (RISE + T_TRANS / 2, lv["deck_top"])]
+           "節点ライズ = %.1f mm、床版上面 = %.1f mm（支点頂部から）" % (crown[1], deck_top)]
     for n, s in enumerate(geo):
         sh.text(tx, gy + 10 + n * 8, s, 4.6)
 
     # ---- 部材表
-    bx, by = 470, 505
+    bx, by = 345, 485
     sh.text(bx, by, "部材表（重量は密度仮定による概算）", 7)
-    cols = [("記号", 22), ("材料", 62), ("長さ", 30), ("本数", 22), ("重量g", 30)]
+    cols = [("記号", 20), ("材料", 52), ("長さ", 26), ("本数", 20), ("重量g", 26)]
     y = by + 5
     x = bx
     for name, w in cols:
         sh.rect(x, y, w, 8, "tblh")
-        sh.text(x + w / 2, y + 5.8, name, 4.6, "middle")
+        sh.text(x + w / 2, y + 5.8, name, 4.4, "middle")
         x += w
     total = 0.0
     for mark, mat, length, count, mass in rows:
@@ -564,21 +596,21 @@ def draw(boxes, lv, chk, loads, rows):
         x = bx
         for (name, w), val in zip(cols, (mark, mat, "%.1f" % length, "%d" % count, "%.2f" % mass)):
             sh.rect(x, y, w, 8, "thin")
-            sh.text(x + w / 2, y + 5.8, val, 4.6, "middle")
+            sh.text(x + w / 2, y + 5.8, val, 4.2, "middle")
             x += w
         total += mass
     y += 8
     sh.text(bx, y + 7, "合計（接着剤を除く）≈ %.1f g" % total, 5.5)
-    sh.text(bx, y + 15, "密度仮定: バルサ %.2f g/cm³、厚紙 %.2f g/cm³" % (RHO_BALSA * 1e3, RHO_PAPER * 1e3), 4.4)
+    sh.text(bx, y + 14, "密度仮定: バルサ %.2f、厚紙 %.2f g/cm³" % (RHO_BALSA * 1e3, RHO_PAPER * 1e3), 4.2)
 
     # ---- 表題欄
-    tbx, tby = 700, 735
-    for n, (k_, v_) in enumerate((("図名", "一般図（簡易下書き）"), ("構造形式", "ダビンチアーチ・上路式"),
-                                  ("縮尺", "1:1（断面図 2:1）"), ("作成日", "2026-10-21"))):
-        sh.rect(tbx, tby + n * 11, 40, 11, "thin")
-        sh.rect(tbx + 40, tby + n * 11, 140, 11, "thin")
-        sh.text(tbx + 20, tby + n * 11 + 7.5, k_, 5, "middle")
-        sh.text(tbx + 45, tby + n * 11 + 7.5, v_, 5)
+    tbx, tby = 700, 770
+    for n, (k_, v_) in enumerate((("図名", "一般図（簡易下書き）"), ("構造形式", "ダビンチアーチ・下路式タイドアーチ"),
+                                  ("作成日", "2026-10-21"))):
+        sh.rect(tbx, tby + n * 13, 40, 13, "thin")
+        sh.rect(tbx + 40, tby + n * 13, 140, 13, "thin")
+        sh.text(tbx + 20, tby + n * 13 + 8.5, k_, 5, "middle")
+        sh.text(tbx + 45, tby + n * 13 + 8.5, v_, 5)
     return sh.svg(), total
 
 
@@ -593,17 +625,19 @@ def compare():
 
 def main():
     boxes, lv = build()
-    chk, loads = checks(boxes, lv)
+    chk = checks(boxes, lv)
     rows = bom(boxes)
     os.makedirs(OUT_DIR, exist_ok=True)
-    svg, total = draw(boxes, lv, chk, loads, rows)
+    svg, total = draw(boxes, lv, chk, rows)
     with open(os.path.join(OUT_DIR, "bridge-draft.svg"), "w") as f:
         f.write(svg)
     write_stl(boxes, os.path.join(OUT_DIR, "bridge-draft.stl"))
 
     print("R = %.2f mm, alpha = %.3f deg, delta = %.2f mm" % (R, math.degrees(ALPHA), DELTA))
-    print("node rise = %.2f mm, deck top = %.2f mm" % (RISE + T_TRANS / 2, lv["deck_top"]))
-    print("deck/stringer cuts:", ", ".join("%.1f" % x for x in lv["cuts"]))
+    print("crown node y = %.2f mm, deck top = %.2f mm" % (pt(R, N_SEG // 2)[1], lv["deck_top"]))
+    print("full-width transverse nodes:", lv["full_nodes"], " load beams at nodes:", lv["load_nodes"])
+    print("stringer cuts:", ", ".join("%.1f" % x for x in lv["cuts_s"]))
+    print("deck cuts:", ", ".join("%.1f" % x for x in lv["cuts_d"]))
     print("\n[checks]")
     for name, ok, val in chk:
         print("  %s  %s : %s" % ("OK" if ok else "NG", name, val))
