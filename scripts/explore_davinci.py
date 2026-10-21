@@ -251,11 +251,12 @@ def build(cfg):
                 if L > 2 * md.MAX_MEMBER - 20:
                     width_ok = False
                 spliced = L > md.MAX_MEMBER    # 150 mm を超える腹材は 2 本を 20 mm 重ねて継ぐ
-                m.truss(a_, b_, E * 9, kind="W", rows=1, s=3.0, b=3.0, h=3.0, lb=L,
+                npl = cfg.get("web_planes", 1)   # 腹材の面数（2 ならタイと同じ両側の面に 1 本ずつ）
+                m.truss(a_, b_, E * 9 * npl, kind="W", rows=npl, s=3.0, b=3.0, h=3.0, lb=L,
                         jcap_t=3.0 * 10 * MAT["tau"])   # 端部は 10 mm 重ねて接着（木目直交）
                 wl += L + (20 if spliced else 0)
         if pairs:
-            w["補強腹材"] = wl * 9 * rho
+            w["補強腹材"] = wl * 9 * rho * cfg.get("web_planes", 1)
         span_c = width
         cross_x = list(xs)
         w["床版"] = 0.0
