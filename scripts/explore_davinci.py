@@ -23,17 +23,20 @@ GUSSET = dict(L=10.0, t=0.5)   # 交差部の厚紙ガセット（両側面、�
 CLEAR_EDGE = 45.0   # 下路: リブ内面の z（有効幅 80 + 余裕）
 
 
-def geometry(n_seg, lng, trs):
+def geometry(n_seg, lng, trs, trs_load=None):
     r, alpha, delta, chord, rise = md.solve_arch(n_seg, lng[1], trs[1])
-    over = trs[0] / 2 + 1.5
+    over = max(trs[0], trs_load[0] if trs_load else 0.0) / 2 + 1.5
+    theta = math.asin(md.SPAN / 2 / r)
+    feasible = abs(n_seg * alpha - 2 * theta) < 1e-6   # 自立条件と支間条件を同時に満たす R が存在するか
     return dict(r=r, alpha=alpha, delta=delta, chord=chord, rise=rise, over=over,
-                length=chord + 2 * over, theta=math.asin(md.SPAN / 2 / r))
+                length=chord + 2 * over, theta=theta, feasible=feasible)
 
 
 def build(cfg):
     """cfg から 2D モデルと重量を作る。下路は片側リブ（荷重 P/2）、上路は全幅（荷重 P）。"""
     n, lng, trs, (nA, nB) = cfg["n"], SECTIONS[cfg["long"]], SECTIONS[cfg["trans"]], cfg["rows"]
-    g = geometry(n, lng, trs)
+    tl = SECTIONS[cfg["trans_load"]] if cfg.get("trans_load") else None
+    g = geometry(n, lng, trs, tl)
     r, alpha, delta, theta = g["r"], g["alpha"], g["delta"], g["theta"]
     E, rho = MAT["E"], MAT["rho"]
     s_str = cfg.get("tie", 5.0)
@@ -67,8 +70,15 @@ def build(cfg):
     if cfg["joint"] == "厚紙ガセット":   # 部材と横材の側面どうしを厚紙で両面から接ぐ（弱い側の面で決まる）
         jcap += 2 * min(h, trs[1]) * GUSSET["L"] * MAT["tau_lap"]
 
+    load_nodes = sorted(set(min(range(1, n), key=lambda k: abs(P(r, k)[0] - x)) for x in md.LOADS))
+    wide = set(load_nodes) if tl else set()   # 荷重が入る節点だけ横材を幅広（5×15 平使い）にする
+
     def arm(a, t, rows):
-        m.frame(a, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="J", rows=rows, s=b, area=area, jcap=jcap)
+        if t in [tn[i] for i in wide]:
+            m.frame(a, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="J", rows=rows, s=b, area=b * tl[0],
+                    jcap=jcap * tl[0] / trs[0])
+        else:
+            m.frame(a, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="J", rows=rows, s=b, area=area, jcap=jcap)
 
     mids = {}
     members = [("A", k, k + 2) for k in range(0, n, 2)] + [("B", k, k + 2) for k in range(1, n - 1, 2)] \
@@ -91,7 +101,6 @@ def build(cfg):
     for t, d in ((tn[0], deck[0]), (tn[-1], deck[-1])):
         m.frame(d, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="L", rows=1, s=b)
 
-    load_nodes = sorted(set(min(range(1, n), key=lambda k: abs(xs[k] - x)) for x in md.LOADS))
     deck_top = h_str + 0.5
     w = {}
     sides = 2 if through else 1
@@ -100,8 +109,9 @@ def build(cfg):
     if through:
         z_c = CLEAR_EDGE + rib_w / 2
         full = [i for i in range(n + 1) if P(r, i)[1] - hh(i) >= deck_top + md.CLEAR_MIN]
-        # 横材は各リブ内（長さ rib_w）。高い節点ではリブ間を別のつなぎ材（長さ 2·z_c）で結ぶ
-        t_len = (n + 1) * 2 * rib_w + len(full) * 2 * z_c
+        # 横材は各リブ内（長さ rib_w）。高い節点ではリブ間を 3mm 角のつなぎ材（長さ 2·z_c）で結ぶ
+        t_len = (n + 1) * 2 * rib_w
+        w["つなぎ材"] = len(full) * 2 * z_c * 9 * rho
         t_max = max(rib_w, 2 * z_c) if full else rib_w
         hset = load_nodes if cfg["hang"] == "載荷点のみ" else list(range(1, n))
         hg = af.HANGERS[cfg["hanger"]]
@@ -133,6 +143,8 @@ def build(cfg):
         joints = (nA + nB) * (n + 1) + 6
         width_ok = True
     w["横材"] = t_len * trs[0] * trs[1] * rho
+    if tl:
+        w["横材"] += len(wide) * sides * (rib_w if through else t_len / (n + 1)) * (tl[0] * tl[1] - trs[0] * trs[1]) * rho
     w["タイ（縦桁）"] = 2 * 514 * s_str * h_str * rho
     if cfg.get("load_beam"):
         w["荷重受け"] = 2 * 75 * md.DECK_W * rho
@@ -140,7 +152,7 @@ def build(cfg):
     if cfg["joint"] == "厚紙ガセット":
         w["交差部ガセット"] = (sides * (nA + nB) * (n + 1) * 2 * (GUSSET["L"] * (h + trs[1] + 4))
                           * GUSSET["t"] * md.RHO_PAPER)
-    ok = g["length"] <= md.MAX_MEMBER and t_max <= md.MAX_MEMBER and span_c <= md.MAX_MEMBER and width_ok
+    ok = g["feasible"] and g["length"] <= md.MAX_MEMBER and t_max <= md.MAX_MEMBER and span_c <= md.MAX_MEMBER and width_ok
     return m, dict(w=w, W=sum(w.values()), ok=ok, geo=g, load_nodes=load_nodes, xs=xs, t_max=t_max,
                    crown=P(r, n // 2)[1], cross_span=span_c)
 
@@ -192,8 +204,22 @@ def refine_configs():
                    load_beam=lb, sheet="なし")
 
 
+def nocard_configs():
+    """厚紙を使わない（床版シート・交差部ガセットなし）下路案の探索。"""
+    for n, lng, trs, rows, hanger, hang, th in itertools.product(
+            (8, 10, 12), ("4角", "5角", "5×15平"), SECTIONS, ROWS, ("バルサ3mm角", "ナイロン3号"),
+            ("全節点", "載荷点のみ"), (5.0, 15.0)):
+        yield dict(type="下路", n=n, long=lng, trans=trs, rows=rows, joint="接着のみ", hanger=hanger,
+                   hang=hang, sheet="なし", tie=5.0, tie_h=th)
+        if trs == "5角":
+            yield dict(type="下路", n=n, long=lng, trans=trs, trans_load="5×15平", rows=rows, joint="接着のみ",
+                       hanger=hanger, hang=hang, sheet="なし", tie=5.0, tie_h=th)
+
+
 def label(c):
-    s = "%s n=%d 縦材%s 横材%s 列A%d/B%d %s" % (c["type"], c["n"], c["long"], c["trans"], *c["rows"], c["joint"])
+    s = "%s n=%d 縦材%s 横材%s%s 列A%d/B%d %s" % (c["type"], c["n"], c["long"], c["trans"],
+                                                 "（載荷節点 %s）" % c["trans_load"] if c.get("trans_load") else "",
+                                                 *c["rows"], c["joint"])
     if c["type"] == "下路":
         s += " %s(%s) 床版%s" % (c["hanger"], c["hang"], c["sheet"])
     else:
@@ -205,7 +231,8 @@ def label(c):
 
 def main():
     results, cache = [], {}
-    for cfg in (refine_configs() if "--refine" in sys.argv else configs()):
+    gen = refine_configs if "--refine" in sys.argv else nocard_configs if "--nocard" in sys.argv else configs
+    for cfg in gen():
         key = tuple(sorted((k, v) for k, v in cfg.items() if k != "sheet"))
         if key in cache:          # 床版シートは重量だけに効くので FEM を使い回す
             base = cache[key]
