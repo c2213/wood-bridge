@@ -35,6 +35,8 @@ HANGERS = {  # EA [N]、結び目込みの破断荷重 [N]（JAFS 標準直径�
     "バルサ3mm角": dict(EA=9 * MAT["E"], T=60.0),
 }
 GLUE_PER_JOINT = 0.03     # g/接合（乾燥後の仮定）
+# 監査対象（2026-10-21 時点の旧案）の寸法。make_draft.py の現行設計とは独立に固定する
+OLD = dict(stringer=5.0, t_trans=3.0, overhang=3.0)
 GUSSET_L = 15.0           # 部材端の添え板（厚紙ガセット）の重ね長さ。両面接着
 SPLICE_L = 30.0           # 床版縦桁（タイ）継手の添え板の重ね長さ。両面接着
 DECK_OPTIONS = {"厚紙 t=0.5": 0.5 * 90 * 505 * 0.70e-3, "厚紙 t=0.3": 0.3 * 90 * 505 * 0.70e-3,
@@ -92,9 +94,11 @@ class Model:
     def truss(self, i, j, EA, **info):
         self.elems.append(dict(t="T", i=i, j=j, EA=EA, **info))
 
-    def beam_line(self, pts, nsub, EA, EI, **info):
-        """pts を順に結ぶ連続梁を nsub 分割で張り、各 pts のノード番号を返す。"""
+    def beam_line(self, pts, nsub, EA, EI, hinge_first=False, hinge_last=False, **info):
+        """pts を順に結ぶ連続梁を nsub 分割で張り、各 pts のノード番号を返す。
+        hinge_first / hinge_last で両端をピン（突き付け接合など）にできる。"""
         ids = [pts[0]]
+        first = len(self.elems)
         for a, b in zip(pts, pts[1:]):
             (xa, ya), (xb, yb) = self.nodes[a], self.nodes[b]
             prev = a
@@ -105,6 +109,10 @@ class Model:
                 prev = n
             self.frame(prev, b, EA, EI, **info)
             ids.append(b)
+        if hinge_first:
+            self.elems[first]["hi"] = True
+        if hinge_last:
+            self.elems[-1]["hj"] = True
         return ids
 
     # -- DOF 番号付け（ノードを x 順に並べて帯幅を小さくする）
@@ -279,7 +287,7 @@ def davinci(hanger, s_long=5.0, s_trans=3.0, rows=(2, 1), rigid_ends=False, tie=
         return -theta + i * alpha
 
     hh0 = s_trans / 2 * (abs(math.cos(ph(0))) + abs(math.sin(ph(0))))
-    yc = md.STRINGER + hh0 - r * math.cos(theta)
+    yc = OLD["stringer"] + hh0 - r * math.cos(theta)
 
     def P(rr, i):
         return md.SPAN / 2 + rr * math.sin(ph(i)), yc + rr * math.cos(ph(i))
@@ -326,7 +334,7 @@ def davinci(hanger, s_long=5.0, s_trans=3.0, rows=(2, 1), rigid_ends=False, tie=
         top = tn[i] if i % 2 else mids[i]
         m.truss(deck[i], top, h["EA"], kind="H", tonly=hanger != "バルサ3mm角", cap=h["T"])
     loads_at(m, deck, xs)
-    length = sum(rows[0 if fam == "A" else 1] * math.dist(P(r + delta, a), P(r + delta, b)) + 2 * md.OVERHANG
+    length = sum(rows[0 if fam == "A" else 1] * math.dist(P(r + delta, a), P(r + delta, b)) + 2 * OLD["overhang"]
                  for fam, a, b in members)
     w_rib = length * s_long ** 2 * MAT["rho"]
     w_t = (8 * 22 + 5 * 134) * s_trans ** 2 * MAT["rho"] / 2  # 片側分
@@ -344,7 +352,7 @@ def loads_at(m, deck, xs):
 def polyarch(hanger, s=5.0, rows=1, rigid=True, n_seg=8, crown=125.9, tie=True, anchor=False, nsub=3, s_str=5.0):
     """通常の（編まない）タイドアーチ。同じライズの円弧上に節点を置き、節点間を1本の直材で結ぶ。"""
     half = md.SPAN / 2
-    y0 = md.STRINGER + s / 2
+    y0 = OLD["stringer"] + s / 2
     f = crown - y0
     r = (half * half + f * f) / (2 * f)
     theta = math.asin(half / r)
@@ -378,7 +386,7 @@ def pratt(s_chord=5.0, s_web=3.0, h=90.0, nsub=2):
     m = Model()
     E = MAT["E"]
     deck = add_deck(m, xs, s_str=s_chord)
-    yt = md.STRINGER / 2 + h
+    yt = OLD["stringer"] / 2 + h
     top = {i: m.node(xs[i], yt) for i in range(1, 6)}
     Ac, Ic, _ = sq(s_chord)
     Aw, Iw, _ = sq(s_web)
@@ -422,12 +430,13 @@ def evaluate(m):
             if ua + ub > worst["member"][0]:
                 worst["member"] = (ua + ub, "%s 軸%.0f%%・曲げ%.0f%%" % (k, 100 * ua / (ua + ub), 100 * ub / (ua + ub)))
             if N < 0:  # 面外座屈（横材・節点間を座屈長、ピン）
-                Lb = e.get("lb", 75.0) if k in ("A", "B") else math.dist(m.nodes[e["i"]], m.nodes[e["j"]]) * 2
+                Lb = e["lb"] if "lb" in e else (75.0 if k in ("A", "B")
+                                                else math.dist(m.nodes[e["i"]], m.nodes[e["j"]]) * 2)
                 ncr = math.pi ** 2 * MAT["E"] * I_oop / Lb ** 2
                 if -N / ncr > worst["oop"][0]:
                     worst["oop"] = (-N / ncr, "%s Lb=%.0f" % (k, Lb))
             if k in ("TC", "EP", "W") or (k == "A" and e.get("gusset")):
-                cap = 2 * e["s"] * GUSSET_L * MAT["tau_lap"]   # 端部ガセット（引張のみ照査）
+                cap = e.get("jcap_t", 2 * e["s"] * GUSSET_L * MAT["tau_lap"])   # 端部の接合（引張のみ照査）
                 if max(0.0, N) / cap > worst["joint"][0]:
                     worst["joint"] = (max(0.0, N) / cap, "%s 端部ガセット引張" % k)
         elif k == "S":
@@ -441,7 +450,7 @@ def evaluate(m):
             if ut > worst["member"][0]:
                 worst["member"] = (ut, "床版縦桁（曲げ・軸）")
         elif k == "J":
-            area = e.get("area", e["s"] * md.T_TRANS)
+            area = e.get("area", e["s"] * OLD["t_trans"])
             n = e["rows"]
             ub = max(0.0, -f["N"]) / n / (area * MAT["fc90"])
             cap = e.get("jcap", area * MAT["tau"])   # 交差1か所の接着耐力（補強があれば jcap）

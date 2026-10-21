@@ -25,6 +25,13 @@ python3 scripts/make_draft.py   # Python 3.9 以上、標準ライブラリの�
 
 `work/` の SVG・STL を再生成し、照査結果・部材表・断面組合せ比較を標準出力に表示する。
 寸法を変えるときはスクリプト冒頭の「設計パラメータ」を編集して再実行する。
+
+構造の評価・探索（標準ライブラリのみ、数分〜15 分）:
+
+```sh
+python3 scripts/audit_fem.py                    # 旧案の構造監査と形式比較
+python3 scripts/explore_davinci.py --reinforce  # 床版なし・補強付きダビンチの探索（最新）
+```
 SVG はブラウザで、STL は macOS のプレビュー等の 3D ビューアで確認できる。
 
 ## 参照
