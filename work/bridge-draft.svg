@@ -1,0 +1,509 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 800" width="900mm" height="800mm">
+<style>
+  text { font-family: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif; fill: #222; }
+  .bg { fill: #fff; }
+  .frame { fill: none; stroke: #222; stroke-width: 0.8; }
+  .thin { stroke: #222; stroke-width: 0.3; fill: none; }
+  .A  { fill: #3d74c9; fill-opacity: 0.55; stroke: #1d4a8f; stroke-width: 0.35; }
+  .B  { fill: #d1493f; fill-opacity: 0.55; stroke: #8e231c; stroke-width: 0.35; }
+  .BS { fill: #e8968f; fill-opacity: 0.65; stroke: #8e231c; stroke-width: 0.35; }
+  .T  { fill: #f0b429; stroke: #8a6100; stroke-width: 0.3; }
+  .P  { fill: #9aa0a6; fill-opacity: 0.7; stroke: #4a4f54; stroke-width: 0.3; }
+  .S  { fill: #b78a5b; fill-opacity: 0.75; stroke: #6b4a26; stroke-width: 0.3; }
+  .D  { fill: #e9dcc3; stroke: #7a6a4a; stroke-width: 0.3; }
+  .deckhidden { fill: none; stroke: #7a6a4a; stroke-width: 0.35; stroke-dasharray: 3 1.5; }
+  .ground { fill: #d9d9d9; stroke: #555; stroke-width: 0.4; }
+  .cl { stroke: #555; stroke-width: 0.3; stroke-dasharray: 8 2 1.5 2; fill: none; }
+  .dim { stroke: #444; stroke-width: 0.25; fill: none; }
+  .dimtick { stroke: #444; stroke-width: 0.5; }
+  .load { stroke: #c62828; stroke-width: 0.7; fill: none; }
+  .thrust { stroke: #2e7d32; stroke-width: 0.7; fill: none; }
+  .loadtxt { fill: #c62828; }
+  .ok { fill: #2e7d32; } .ng { fill: #c62828; }
+  .tblh { fill: #eee; stroke: #222; stroke-width: 0.3; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
+<rect class="bg" x="0.00" y="0.00" width="900.00" height="800.00"/>
+<rect class="frame" x="10.00" y="10.00" width="880.00" height="780.00"/>
+<text class="" x="30.00" y="32.00" font-size="11" text-anchor="start">ダビンチアーチ橋（上路式）一般図 — 簡易下書き</text>
+<text class="" x="30.00" y="43.00" font-size="5.5" text-anchor="start">単位: mm ／ SVG座標 1単位 = 1mm（断面図のみ2倍）／ AutoCAD 作図前の検討用</text>
+<text class="" x="330.00" y="62.00" font-size="8" text-anchor="middle">側面図</text>
+<rect class="ground" x="35.00" y="245.00" width="45.00" height="25.00"/>
+<rect class="ground" x="580.00" y="245.00" width="45.00" height="25.00"/>
+<line class="cl" x1="330.00" y1="275.00" x2="330.00" y2="87.07"/>
+<text class="" x="332.00" y="91.07" font-size="5" text-anchor="start">CL</text>
+<polygon class="D" points="78.00,117.57 191.60,117.57 191.60,117.07 78.00,117.07"/>
+<polygon class="D" points="191.60,117.57 330.00,117.57 330.00,117.07 191.60,117.07"/>
+<polygon class="D" points="330.00,117.57 468.40,117.57 468.40,117.07 330.00,117.07"/>
+<polygon class="D" points="468.40,117.57 582.00,117.57 582.00,117.07 468.40,117.07"/>
+<polygon class="S" points="78.00,122.57 191.60,122.57 191.60,117.57 78.00,117.57"/>
+<polygon class="S" points="78.00,122.57 191.60,122.57 191.60,117.57 78.00,117.57"/>
+<polygon class="S" points="191.60,122.57 330.00,122.57 330.00,117.57 191.60,117.57"/>
+<polygon class="S" points="191.60,122.57 330.00,122.57 330.00,117.57 191.60,117.57"/>
+<polygon class="S" points="330.00,122.57 468.40,122.57 468.40,117.57 330.00,117.57"/>
+<polygon class="S" points="330.00,122.57 468.40,122.57 468.40,117.57 330.00,117.57"/>
+<polygon class="S" points="468.40,122.57 582.00,122.57 582.00,117.57 468.40,117.57"/>
+<polygon class="S" points="468.40,122.57 582.00,122.57 582.00,117.57 468.40,117.57"/>
+<polygon class="P" points="78.00,241.39 82.00,241.39 82.00,122.57 78.00,122.57"/>
+<polygon class="P" points="78.00,241.39 82.00,241.39 82.00,122.57 78.00,122.57"/>
+<polygon class="P" points="128.92,191.37 132.92,191.37 132.92,122.57 128.92,122.57"/>
+<polygon class="P" points="128.92,191.37 132.92,191.37 132.92,122.57 128.92,122.57"/>
+<polygon class="P" points="189.60,153.89 193.60,153.89 193.60,122.57 189.60,122.57"/>
+<polygon class="P" points="189.60,153.89 193.60,153.89 193.60,122.57 189.60,122.57"/>
+<polygon class="P" points="257.06,130.77 261.06,130.77 261.06,122.57 257.06,122.57"/>
+<polygon class="P" points="257.06,130.77 261.06,130.77 261.06,122.57 257.06,122.57"/>
+<polygon class="P" points="398.94,130.77 402.94,130.77 402.94,122.57 398.94,122.57"/>
+<polygon class="P" points="398.94,130.77 402.94,130.77 402.94,122.57 398.94,122.57"/>
+<polygon class="P" points="466.40,153.89 470.40,153.89 470.40,122.57 466.40,122.57"/>
+<polygon class="P" points="466.40,153.89 470.40,153.89 470.40,122.57 466.40,122.57"/>
+<polygon class="P" points="527.08,191.37 531.08,191.37 531.08,122.57 527.08,122.57"/>
+<polygon class="P" points="527.08,191.37 531.08,191.37 531.08,122.57 527.08,122.57"/>
+<polygon class="P" points="578.00,241.39 582.00,241.39 582.00,122.57 578.00,122.57"/>
+<polygon class="P" points="578.00,241.39 582.00,241.39 582.00,122.57 578.00,122.57"/>
+<polygon class="T" points="77.89,243.72 80.22,245.61 82.11,243.28 79.78,241.39"/>
+<polygon class="T" points="128.81,193.22 130.67,195.58 133.02,193.73 131.17,191.37"/>
+<polygon class="T" points="189.60,155.17 190.89,157.88 193.60,156.60 192.31,153.89"/>
+<polygon class="T" points="257.27,131.43 257.93,134.36 260.85,133.70 260.19,130.77"/>
+<polygon class="T" points="328.50,126.17 331.50,126.17 331.50,123.17 328.50,123.17"/>
+<polygon class="T" points="399.15,133.70 402.07,134.36 402.73,131.43 399.81,130.77"/>
+<polygon class="T" points="466.40,156.60 469.11,157.88 470.40,155.17 467.69,153.89"/>
+<polygon class="T" points="526.98,193.73 529.33,195.58 531.19,193.22 528.83,191.37"/>
+<polygon class="T" points="577.89,243.28 579.78,245.61 582.11,243.72 580.22,241.39"/>
+<polygon class="B" points="124.67,189.36 126.81,193.88 261.96,129.63 259.82,125.12"/>
+<polygon class="B" points="124.67,189.36 126.81,193.88 261.96,129.63 259.82,125.12"/>
+<polygon class="B" points="255.18,131.17 404.82,131.17 404.82,126.17 255.18,126.17"/>
+<polygon class="B" points="255.18,131.17 404.82,131.17 404.82,126.17 255.18,126.17"/>
+<polygon class="B" points="398.04,129.63 533.19,193.88 535.33,189.36 400.18,125.12"/>
+<polygon class="B" points="398.04,129.63 533.19,193.88 535.33,189.36 400.18,125.12"/>
+<polygon class="BS" points="73.01,241.29 76.51,244.86 132.34,190.01 128.84,186.45"/>
+<polygon class="BS" points="73.01,241.29 76.51,244.86 132.34,190.01 128.84,186.45"/>
+<polygon class="BS" points="527.66,190.01 583.49,244.86 586.99,241.29 531.16,186.45"/>
+<polygon class="BS" points="527.66,190.01 583.49,244.86 586.99,241.29 531.16,186.45"/>
+<polygon class="A" points="72.99,240.86 76.08,244.79 193.78,152.39 190.70,148.45"/>
+<polygon class="A" points="72.99,240.86 76.08,244.79 193.78,152.39 190.70,148.45"/>
+<polygon class="A" points="186.40,150.49 187.50,155.37 333.48,122.44 332.38,117.57"/>
+<polygon class="A" points="186.40,150.49 187.50,155.37 333.48,122.44 332.38,117.57"/>
+<polygon class="A" points="326.52,122.44 472.50,155.37 473.60,150.49 327.62,117.57"/>
+<polygon class="A" points="326.52,122.44 472.50,155.37 473.60,150.49 327.62,117.57"/>
+<polygon class="A" points="466.22,152.39 583.92,244.79 587.01,240.86 469.30,148.45"/>
+<polygon class="A" points="466.22,152.39 583.92,244.79 587.01,240.86 469.30,148.45"/>
+<text class="" x="130.92" y="188.76" font-size="4.5" text-anchor="middle">A1</text>
+<text class="" x="259.06" y="126.71" font-size="4.5" text-anchor="middle">A2</text>
+<text class="" x="400.94" y="126.71" font-size="4.5" text-anchor="middle">A3</text>
+<text class="" x="529.08" y="188.76" font-size="4.5" text-anchor="middle">A4</text>
+<text class="" x="193.31" y="171.50" font-size="4.5" text-anchor="middle">B1</text>
+<text class="" x="330.00" y="140.67" font-size="4.5" text-anchor="middle">B2</text>
+<text class="" x="466.69" y="171.50" font-size="4.5" text-anchor="middle">B3</text>
+<text class="" x="102.67" y="227.65" font-size="4.5" text-anchor="middle">BS</text>
+<text class="" x="557.33" y="227.65" font-size="4.5" text-anchor="middle">BS</text>
+<text class="" x="84.00" y="250.50" font-size="3.8" text-anchor="start">T0</text>
+<text class="" x="134.92" y="200.48" font-size="3.8" text-anchor="start">T1</text>
+<text class="" x="195.60" y="162.89" font-size="3.8" text-anchor="start">T2</text>
+<text class="" x="263.06" y="139.57" font-size="3.8" text-anchor="start">T3</text>
+<text class="" x="334.00" y="131.67" font-size="3.8" text-anchor="start">T4</text>
+<text class="" x="396.94" y="139.57" font-size="3.8" text-anchor="end">T5</text>
+<text class="" x="464.40" y="162.89" font-size="3.8" text-anchor="end">T6</text>
+<text class="" x="525.08" y="200.48" font-size="3.8" text-anchor="end">T7</text>
+<text class="" x="576.00" y="250.50" font-size="3.8" text-anchor="end">T8</text>
+<line class="load" x1="255.00" y1="95.07" x2="255.00" y2="116.27" marker-end="url(#ah)"/>
+<text class="loadtxt" x="255.00" y="93.07" font-size="5" text-anchor="middle">P/2</text>
+<line class="load" x1="405.00" y1="95.07" x2="405.00" y2="116.27" marker-end="url(#ah)"/>
+<text class="loadtxt" x="405.00" y="93.07" font-size="5" text-anchor="middle">P/2</text>
+<line class="dim" x1="80.00" y1="85.07" x2="255.00" y2="85.07"/>
+<line class="dimtick" x1="78.50" y1="86.57" x2="81.50" y2="83.57"/>
+<line class="dimtick" x1="253.50" y1="86.57" x2="256.50" y2="83.57"/>
+<text class="" x="167.50" y="83.57" font-size="5.5" text-anchor="middle">175</text>
+<line class="dim" x1="255.00" y1="85.07" x2="405.00" y2="85.07"/>
+<line class="dimtick" x1="253.50" y1="86.57" x2="256.50" y2="83.57"/>
+<line class="dimtick" x1="403.50" y1="86.57" x2="406.50" y2="83.57"/>
+<text class="" x="330.00" y="83.57" font-size="5.5" text-anchor="middle">150（載荷間隔）</text>
+<line class="dim" x1="405.00" y1="85.07" x2="580.00" y2="85.07"/>
+<line class="dimtick" x1="403.50" y1="86.57" x2="406.50" y2="83.57"/>
+<line class="dimtick" x1="578.50" y1="86.57" x2="581.50" y2="83.57"/>
+<text class="" x="492.50" y="83.57" font-size="5.5" text-anchor="middle">175</text>
+<line class="thrust" x1="40.00" y1="241.00" x2="74.00" y2="241.00" marker-end="url(#ah)"/>
+<line class="thrust" x1="620.00" y1="241.00" x2="586.00" y2="241.00" marker-end="url(#ah)"/>
+<text class="" x="37.00" y="276.00" font-size="4.2" text-anchor="start">→ 水平反力はスパン外アンカーで受ける ←</text>
+<line class="dim" x1="80.00" y1="247.00" x2="80.00" y2="285.00"/>
+<line class="dim" x1="580.00" y1="247.00" x2="580.00" y2="285.00"/>
+<line class="dim" x1="80.00" y1="283.00" x2="580.00" y2="283.00"/>
+<line class="dimtick" x1="78.50" y1="284.50" x2="81.50" y2="281.50"/>
+<line class="dimtick" x1="578.50" y1="284.50" x2="581.50" y2="281.50"/>
+<text class="" x="330.00" y="281.50" font-size="5.5" text-anchor="middle">支間 500</text>
+<line class="dim" x1="35.00" y1="245.00" x2="26.00" y2="245.00"/>
+<line class="dim" x1="78.00" y1="117.07" x2="26.00" y2="117.07"/>
+<line class="dim" x1="28.00" y1="245.00" x2="28.00" y2="117.07"/>
+<line class="dimtick" x1="26.50" y1="246.50" x2="29.50" y2="243.50"/>
+<line class="dimtick" x1="26.50" y1="118.57" x2="29.50" y2="115.57"/>
+<text class="" x="26.50" y="181.03" font-size="5.5" text-anchor="middle" transform="rotate(-90 26.50 181.03)">床版上面 127.9</text>
+<line class="dim" x1="625.00" y1="245.00" x2="637.00" y2="245.00"/>
+<line class="dim" x1="338.00" y1="124.67" x2="637.00" y2="124.67"/>
+<line class="dim" x1="635.00" y1="245.00" x2="635.00" y2="124.67"/>
+<line class="dimtick" x1="633.50" y1="246.50" x2="636.50" y2="243.50"/>
+<line class="dimtick" x1="633.50" y1="126.17" x2="636.50" y2="123.17"/>
+<text class="" x="633.50" y="184.83" font-size="5.5" text-anchor="middle" transform="rotate(-90 633.50 184.83)">節点ライズ 120.3</text>
+<line class="frame" x1="336.00" y1="111.07" x2="336.00" y2="117.07"/>
+<line class="frame" x1="336.00" y1="255.00" x2="336.00" y2="261.00"/>
+<text class="" x="337.50" y="110.07" font-size="5" text-anchor="start">A</text>
+<text class="" x="337.50" y="267.00" font-size="5" text-anchor="start">A</text>
+<line class="frame" x1="130.92" y1="111.07" x2="130.92" y2="117.07"/>
+<line class="frame" x1="130.92" y1="255.00" x2="130.92" y2="261.00"/>
+<text class="" x="132.42" y="110.07" font-size="5" text-anchor="start">B</text>
+<text class="" x="132.42" y="267.00" font-size="5" text-anchor="start">B</text>
+<text class="" x="330.00" y="333.00" font-size="8" text-anchor="middle">平面図（床版を取り除いて表示・破線＝床版外形）</text>
+<line class="cl" x1="65.00" y1="395.00" x2="595.00" y2="395.00"/>
+<polygon class="S" points="78.00,437.50 191.60,437.50 191.60,432.50 78.00,432.50"/>
+<polygon class="S" points="78.00,357.50 191.60,357.50 191.60,352.50 78.00,352.50"/>
+<polygon class="S" points="191.60,437.50 330.00,437.50 330.00,432.50 191.60,432.50"/>
+<polygon class="S" points="191.60,357.50 330.00,357.50 330.00,352.50 191.60,352.50"/>
+<polygon class="S" points="330.00,437.50 468.40,437.50 468.40,432.50 330.00,432.50"/>
+<polygon class="S" points="330.00,357.50 468.40,357.50 468.40,352.50 330.00,352.50"/>
+<polygon class="S" points="468.40,437.50 582.00,437.50 582.00,432.50 468.40,432.50"/>
+<polygon class="S" points="468.40,357.50 582.00,357.50 582.00,352.50 468.40,352.50"/>
+<polygon class="P" points="78.00,437.00 82.00,437.00 82.00,433.00 78.00,433.00"/>
+<polygon class="P" points="78.00,357.00 82.00,357.00 82.00,353.00 78.00,353.00"/>
+<polygon class="P" points="128.92,437.00 132.92,437.00 132.92,433.00 128.92,433.00"/>
+<polygon class="P" points="128.92,357.00 132.92,357.00 132.92,353.00 128.92,353.00"/>
+<polygon class="P" points="189.60,437.00 193.60,437.00 193.60,433.00 189.60,433.00"/>
+<polygon class="P" points="189.60,357.00 193.60,357.00 193.60,353.00 189.60,353.00"/>
+<polygon class="P" points="257.06,437.00 261.06,437.00 261.06,433.00 257.06,433.00"/>
+<polygon class="P" points="257.06,357.00 261.06,357.00 261.06,353.00 257.06,353.00"/>
+<polygon class="P" points="398.94,437.00 402.94,437.00 402.94,433.00 398.94,433.00"/>
+<polygon class="P" points="398.94,357.00 402.94,357.00 402.94,353.00 398.94,353.00"/>
+<polygon class="P" points="466.40,437.00 470.40,437.00 470.40,433.00 466.40,433.00"/>
+<polygon class="P" points="466.40,357.00 470.40,357.00 470.40,353.00 466.40,353.00"/>
+<polygon class="P" points="527.08,437.00 531.08,437.00 531.08,433.00 527.08,433.00"/>
+<polygon class="P" points="527.08,357.00 531.08,357.00 531.08,353.00 527.08,353.00"/>
+<polygon class="P" points="578.00,437.00 582.00,437.00 582.00,433.00 578.00,433.00"/>
+<polygon class="P" points="578.00,357.00 582.00,357.00 582.00,353.00 578.00,353.00"/>
+<polygon class="T" points="77.89,440.00 82.11,440.00 82.11,350.00 77.89,350.00"/>
+<polygon class="T" points="128.81,440.00 133.02,440.00 133.02,350.00 128.81,350.00"/>
+<polygon class="T" points="189.60,440.00 193.60,440.00 193.60,350.00 189.60,350.00"/>
+<polygon class="T" points="257.27,440.00 260.85,440.00 260.85,350.00 257.27,350.00"/>
+<polygon class="T" points="328.50,440.00 331.50,440.00 331.50,350.00 328.50,350.00"/>
+<polygon class="T" points="399.15,440.00 402.73,440.00 402.73,350.00 399.15,350.00"/>
+<polygon class="T" points="466.40,440.00 470.40,440.00 470.40,350.00 466.40,350.00"/>
+<polygon class="T" points="526.98,440.00 531.19,440.00 531.19,350.00 526.98,350.00"/>
+<polygon class="T" points="577.89,440.00 582.11,440.00 582.11,350.00 577.89,350.00"/>
+<polygon class="B" points="124.67,407.50 261.96,407.50 261.96,402.50 124.67,402.50"/>
+<polygon class="B" points="124.67,387.50 261.96,387.50 261.96,382.50 124.67,382.50"/>
+<polygon class="B" points="255.18,407.50 404.82,407.50 404.82,402.50 255.18,402.50"/>
+<polygon class="B" points="255.18,387.50 404.82,387.50 404.82,382.50 255.18,382.50"/>
+<polygon class="B" points="398.04,407.50 535.33,407.50 535.33,402.50 398.04,402.50"/>
+<polygon class="B" points="398.04,387.50 535.33,387.50 535.33,382.50 398.04,382.50"/>
+<polygon class="BS" points="73.01,407.50 132.34,407.50 132.34,402.50 73.01,402.50"/>
+<polygon class="BS" points="73.01,387.50 132.34,387.50 132.34,382.50 73.01,382.50"/>
+<polygon class="BS" points="527.66,407.50 586.99,407.50 586.99,402.50 527.66,402.50"/>
+<polygon class="BS" points="527.66,387.50 586.99,387.50 586.99,382.50 527.66,382.50"/>
+<polygon class="A" points="72.99,427.50 193.78,427.50 193.78,422.50 72.99,422.50"/>
+<polygon class="A" points="72.99,367.50 193.78,367.50 193.78,362.50 72.99,362.50"/>
+<polygon class="A" points="186.40,427.50 333.48,427.50 333.48,422.50 186.40,422.50"/>
+<polygon class="A" points="186.40,367.50 333.48,367.50 333.48,362.50 186.40,362.50"/>
+<polygon class="A" points="326.52,427.50 473.60,427.50 473.60,422.50 326.52,422.50"/>
+<polygon class="A" points="326.52,367.50 473.60,367.50 473.60,362.50 326.52,362.50"/>
+<polygon class="A" points="466.22,427.50 587.01,427.50 587.01,422.50 466.22,422.50"/>
+<polygon class="A" points="466.22,367.50 587.01,367.50 587.01,362.50 466.22,362.50"/>
+<rect class="deckhidden" x="78.00" y="350.00" width="504.00" height="90.00"/>
+<line class="load" x1="255.00" y1="342.00" x2="255.00" y2="444.00"/>
+<text class="loadtxt" x="255.00" y="340.00" font-size="4.5" text-anchor="middle">載荷線</text>
+<line class="load" x1="405.00" y1="342.00" x2="405.00" y2="444.00"/>
+<text class="loadtxt" x="405.00" y="340.00" font-size="4.5" text-anchor="middle">載荷線</text>
+<line class="dim" x1="610.00" y1="350.00" x2="610.00" y2="365.00"/>
+<line class="dimtick" x1="608.50" y1="351.50" x2="611.50" y2="348.50"/>
+<line class="dimtick" x1="608.50" y1="366.50" x2="611.50" y2="363.50"/>
+<text class="" x="608.50" y="357.50" font-size="4.5" text-anchor="middle" transform="rotate(-90 608.50 357.50)">15</text>
+<line class="dim" x1="610.00" y1="365.00" x2="610.00" y2="385.00"/>
+<line class="dimtick" x1="608.50" y1="366.50" x2="611.50" y2="363.50"/>
+<line class="dimtick" x1="608.50" y1="386.50" x2="611.50" y2="383.50"/>
+<text class="" x="608.50" y="375.00" font-size="4.5" text-anchor="middle" transform="rotate(-90 608.50 375.00)">20</text>
+<line class="dim" x1="610.00" y1="385.00" x2="610.00" y2="405.00"/>
+<line class="dimtick" x1="608.50" y1="386.50" x2="611.50" y2="383.50"/>
+<line class="dimtick" x1="608.50" y1="406.50" x2="611.50" y2="403.50"/>
+<text class="" x="608.50" y="395.00" font-size="4.5" text-anchor="middle" transform="rotate(-90 608.50 395.00)">20</text>
+<line class="dim" x1="610.00" y1="405.00" x2="610.00" y2="425.00"/>
+<line class="dimtick" x1="608.50" y1="406.50" x2="611.50" y2="403.50"/>
+<line class="dimtick" x1="608.50" y1="426.50" x2="611.50" y2="423.50"/>
+<text class="" x="608.50" y="415.00" font-size="4.5" text-anchor="middle" transform="rotate(-90 608.50 415.00)">20</text>
+<line class="dim" x1="610.00" y1="425.00" x2="610.00" y2="440.00"/>
+<line class="dimtick" x1="608.50" y1="426.50" x2="611.50" y2="423.50"/>
+<line class="dimtick" x1="608.50" y1="441.50" x2="611.50" y2="438.50"/>
+<text class="" x="608.50" y="432.50" font-size="4.5" text-anchor="middle" transform="rotate(-90 608.50 432.50)">15</text>
+<line class="dim" x1="625.00" y1="350.00" x2="625.00" y2="440.00"/>
+<line class="dimtick" x1="623.50" y1="351.50" x2="626.50" y2="348.50"/>
+<line class="dimtick" x1="623.50" y1="441.50" x2="626.50" y2="438.50"/>
+<text class="" x="623.50" y="395.00" font-size="4.5" text-anchor="middle" transform="rotate(-90 623.50 395.00)">床版幅 90（有効幅≧80）</text>
+<text class="" x="70.00" y="366.50" font-size="4" text-anchor="end">A系</text>
+<text class="" x="70.00" y="386.50" font-size="4" text-anchor="end">B系</text>
+<text class="" x="70.00" y="356.50" font-size="4" text-anchor="end">縦桁・鉛直材</text>
+<line class="dim" x1="80.00" y1="441.00" x2="80.00" y2="458.00"/>
+<line class="dim" x1="130.92" y1="441.00" x2="130.92" y2="458.00"/>
+<line class="dim" x1="80.00" y1="456.00" x2="130.92" y2="456.00"/>
+<line class="dimtick" x1="78.50" y1="457.50" x2="81.50" y2="454.50"/>
+<line class="dimtick" x1="129.42" y1="457.50" x2="132.42" y2="454.50"/>
+<text class="" x="105.46" y="454.50" font-size="4.2" text-anchor="middle">50.9</text>
+<line class="dim" x1="130.92" y1="441.00" x2="130.92" y2="458.00"/>
+<line class="dim" x1="191.60" y1="441.00" x2="191.60" y2="458.00"/>
+<line class="dim" x1="130.92" y1="456.00" x2="191.60" y2="456.00"/>
+<line class="dimtick" x1="129.42" y1="457.50" x2="132.42" y2="454.50"/>
+<line class="dimtick" x1="190.10" y1="457.50" x2="193.10" y2="454.50"/>
+<text class="" x="161.26" y="454.50" font-size="4.2" text-anchor="middle">60.7</text>
+<line class="dim" x1="191.60" y1="441.00" x2="191.60" y2="458.00"/>
+<line class="dim" x1="259.06" y1="441.00" x2="259.06" y2="458.00"/>
+<line class="dim" x1="191.60" y1="456.00" x2="259.06" y2="456.00"/>
+<line class="dimtick" x1="190.10" y1="457.50" x2="193.10" y2="454.50"/>
+<line class="dimtick" x1="257.56" y1="457.50" x2="260.56" y2="454.50"/>
+<text class="" x="225.33" y="454.50" font-size="4.2" text-anchor="middle">67.5</text>
+<line class="dim" x1="259.06" y1="441.00" x2="259.06" y2="458.00"/>
+<line class="dim" x1="330.00" y1="441.00" x2="330.00" y2="458.00"/>
+<line class="dim" x1="259.06" y1="456.00" x2="330.00" y2="456.00"/>
+<line class="dimtick" x1="257.56" y1="457.50" x2="260.56" y2="454.50"/>
+<line class="dimtick" x1="328.50" y1="457.50" x2="331.50" y2="454.50"/>
+<text class="" x="294.53" y="454.50" font-size="4.2" text-anchor="middle">70.9</text>
+<line class="dim" x1="330.00" y1="441.00" x2="330.00" y2="458.00"/>
+<line class="dim" x1="400.94" y1="441.00" x2="400.94" y2="458.00"/>
+<line class="dim" x1="330.00" y1="456.00" x2="400.94" y2="456.00"/>
+<line class="dimtick" x1="328.50" y1="457.50" x2="331.50" y2="454.50"/>
+<line class="dimtick" x1="399.44" y1="457.50" x2="402.44" y2="454.50"/>
+<text class="" x="365.47" y="454.50" font-size="4.2" text-anchor="middle">70.9</text>
+<line class="dim" x1="400.94" y1="441.00" x2="400.94" y2="458.00"/>
+<line class="dim" x1="468.40" y1="441.00" x2="468.40" y2="458.00"/>
+<line class="dim" x1="400.94" y1="456.00" x2="468.40" y2="456.00"/>
+<line class="dimtick" x1="399.44" y1="457.50" x2="402.44" y2="454.50"/>
+<line class="dimtick" x1="466.90" y1="457.50" x2="469.90" y2="454.50"/>
+<text class="" x="434.67" y="454.50" font-size="4.2" text-anchor="middle">67.5</text>
+<line class="dim" x1="468.40" y1="441.00" x2="468.40" y2="458.00"/>
+<line class="dim" x1="529.08" y1="441.00" x2="529.08" y2="458.00"/>
+<line class="dim" x1="468.40" y1="456.00" x2="529.08" y2="456.00"/>
+<line class="dimtick" x1="466.90" y1="457.50" x2="469.90" y2="454.50"/>
+<line class="dimtick" x1="527.58" y1="457.50" x2="530.58" y2="454.50"/>
+<text class="" x="498.74" y="454.50" font-size="4.2" text-anchor="middle">60.7</text>
+<line class="dim" x1="529.08" y1="441.00" x2="529.08" y2="458.00"/>
+<line class="dim" x1="580.00" y1="441.00" x2="580.00" y2="458.00"/>
+<line class="dim" x1="529.08" y1="456.00" x2="580.00" y2="456.00"/>
+<line class="dimtick" x1="527.58" y1="457.50" x2="530.58" y2="454.50"/>
+<line class="dimtick" x1="578.50" y1="457.50" x2="581.50" y2="454.50"/>
+<text class="" x="554.54" y="454.50" font-size="4.2" text-anchor="middle">50.9</text>
+<text class="" x="330.00" y="466.00" font-size="4.5" text-anchor="middle">節点（横材）の水平間隔</text>
+<text class="" x="191.60" y="444.50" font-size="3.6" text-anchor="middle">継手</text>
+<text class="" x="330.00" y="444.50" font-size="3.6" text-anchor="middle">継手</text>
+<text class="" x="468.40" y="444.50" font-size="3.6" text-anchor="middle">継手</text>
+<rect class="D" x="645.00" y="66.89" width="180.00" height="1.00"/>
+<rect class="S" x="650.00" y="67.89" width="10.00" height="10.00"/>
+<rect class="S" x="810.00" y="67.89" width="10.00" height="10.00"/>
+<rect class="P" x="651.00" y="77.89" width="8.00" height="137.61"/>
+<rect class="P" x="811.00" y="77.89" width="8.00" height="137.61"/>
+<rect class="T" x="645.00" y="216.71" width="180.00" height="6.00"/>
+<rect class="B" x="710.00" y="208.42" width="10.00" height="10.00"/>
+<rect class="B" x="750.00" y="208.42" width="10.00" height="10.00"/>
+<rect class="A" x="670.00" y="221.00" width="10.00" height="10.00"/>
+<rect class="A" x="790.00" y="221.00" width="10.00" height="10.00"/>
+<text class="" x="735.00" y="44.89" font-size="7" text-anchor="middle">断面B-B（節点T1・2倍）</text>
+<line class="dim" x1="645.00" y1="60.89" x2="825.00" y2="60.89"/>
+<line class="dimtick" x1="643.50" y1="62.39" x2="646.50" y2="59.39"/>
+<line class="dimtick" x1="823.50" y1="62.39" x2="826.50" y2="59.39"/>
+<text class="" x="735.00" y="59.39" font-size="4.5" text-anchor="middle">床版幅 90</text>
+<line class="cl" x1="735.00" y1="64.89" x2="735.00" y2="239.00"/>
+<text class="" x="827.00" y="210.42" font-size="3.8" text-anchor="start">B系端部（横材の上）</text>
+<text class="" x="827.00" y="231.00" font-size="3.8" text-anchor="start">A系中央部（横材の下）</text>
+<text class="" x="827.00" y="221.21" font-size="3.8" text-anchor="start">横材T1</text>
+<rect class="D" x="645.00" y="297.80" width="180.00" height="1.00"/>
+<rect class="S" x="650.00" y="298.80" width="10.00" height="10.00"/>
+<rect class="S" x="810.00" y="298.80" width="10.00" height="10.00"/>
+<rect class="T" x="645.00" y="310.00" width="180.00" height="6.00"/>
+<rect class="B" x="710.00" y="316.00" width="10.00" height="10.00"/>
+<rect class="B" x="750.00" y="316.00" width="10.00" height="10.00"/>
+<rect class="A" x="670.00" y="300.00" width="10.00" height="10.00"/>
+<rect class="A" x="790.00" y="300.00" width="10.00" height="10.00"/>
+<text class="" x="735.00" y="275.80" font-size="7" text-anchor="middle">断面A-A（クラウンT4・2倍）</text>
+<line class="dim" x1="645.00" y1="291.80" x2="825.00" y2="291.80"/>
+<line class="dimtick" x1="643.50" y1="293.30" x2="646.50" y2="290.30"/>
+<line class="dimtick" x1="823.50" y1="293.30" x2="826.50" y2="290.30"/>
+<text class="" x="735.00" y="290.30" font-size="4.5" text-anchor="middle">床版幅 90</text>
+<line class="cl" x1="735.00" y1="295.80" x2="735.00" y2="334.00"/>
+<text class="" x="827.00" y="302.00" font-size="3.8" text-anchor="start">A系端部（横材の上）</text>
+<text class="" x="827.00" y="326.00" font-size="3.8" text-anchor="start">B系中央部（横材の下）</text>
+<text class="" x="827.00" y="314.50" font-size="3.8" text-anchor="start">横材T4</text>
+<rect class="A" x="650.00" y="360.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="364.30" font-size="4.5" text-anchor="start">A系縦材（偶数節点を結ぶ）</text>
+<rect class="B" x="650.00" y="368.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="372.30" font-size="4.5" text-anchor="start">B系縦材（奇数節点を結ぶ）</text>
+<rect class="BS" x="650.00" y="376.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="380.30" font-size="4.5" text-anchor="start">B系端部短材</text>
+<rect class="T" x="650.00" y="384.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="388.30" font-size="4.5" text-anchor="start">横材</text>
+<rect class="P" x="650.00" y="392.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="396.30" font-size="4.5" text-anchor="start">鉛直材</text>
+<rect class="S" x="650.00" y="400.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="404.30" font-size="4.5" text-anchor="start">床版縦桁</text>
+<rect class="D" x="650.00" y="408.00" width="8.00" height="5.00"/>
+<text class="" x="661.00" y="412.30" font-size="4.5" text-anchor="start">床版（厚紙）</text>
+<text class="" x="30.00" y="505.00" font-size="7" text-anchor="start">ルール照査（自動計算）</text>
+<text class="ok" x="30.00" y="515.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="515.00" font-size="4.6" text-anchor="start">支間 = 500 mm：500.0 mm</text>
+<text class="ok" x="30.00" y="523.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="523.00" font-size="4.6" text-anchor="start">一部材の長さ ≤ 150 mm：最大 149.6 mm（A, 余裕 0.4 mm）</text>
+<text class="ok" x="30.00" y="531.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="531.00" font-size="4.6" text-anchor="start">床版有効幅 ≥ 80 mm：90 mm</text>
+<text class="ok" x="30.00" y="539.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="539.00" font-size="4.6" text-anchor="start">床版上有効高さ ≥ 80 mm：上路式のため床版上に部材なし</text>
+<text class="ok" x="30.00" y="547.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="547.00" font-size="4.6" text-anchor="start">載荷点が床版上：x = 175, 325 mm</text>
+<text class="ok" x="30.00" y="555.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="555.00" font-size="4.6" text-anchor="start">中央吊り（z=0）時の吊り糸と横材の離れ：最小 2.3 mm（縦材間スリット幅 15 mm）</text>
+<text class="ok" x="30.00" y="563.00" font-size="5" text-anchor="start">OK</text>
+<text class="" x="42.00" y="563.00" font-size="4.6" text-anchor="start">側方吊り（|z| &gt; 45）時の干渉：床版・横材とも |z| ≤ 45 mm</text>
+<text class="" x="30.00" y="579.00" font-size="7" text-anchor="start">幾何（ダビンチアーチの自立条件 cosα=(R−δ)/(R+δ)）</text>
+<text class="" x="30.00" y="589.00" font-size="4.6" text-anchor="start">分割数 n = 8、δ = (縦材+横材)/2 = 4.0 mm</text>
+<text class="" x="30.00" y="597.00" font-size="4.6" text-anchor="start">節点円半径 R = 322.4 mm、節点角 α = 12.71°</text>
+<text class="" x="30.00" y="605.00" font-size="4.6" text-anchor="start">縦材の節点間距離 = 143.6 mm（＋突き出し 3×2）</text>
+<text class="" x="30.00" y="613.00" font-size="4.6" text-anchor="start">節点ライズ = 120.3 mm、床版上面高さ = 127.9 mm</text>
+<text class="" x="470.00" y="505.00" font-size="7" text-anchor="start">部材表（重量は密度仮定による概算）</text>
+<rect class="tblh" x="470.00" y="510.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="515.80" font-size="4.6" text-anchor="middle">記号</text>
+<rect class="tblh" x="492.00" y="510.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="515.80" font-size="4.6" text-anchor="middle">材料</text>
+<rect class="tblh" x="554.00" y="510.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="515.80" font-size="4.6" text-anchor="middle">長さ</text>
+<rect class="tblh" x="584.00" y="510.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="515.80" font-size="4.6" text-anchor="middle">本数</text>
+<rect class="tblh" x="606.00" y="510.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="515.80" font-size="4.6" text-anchor="middle">重量g</text>
+<rect class="thin" x="470.00" y="518.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="523.80" font-size="4.6" text-anchor="middle">A</text>
+<rect class="thin" x="492.00" y="518.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="523.80" font-size="4.6" text-anchor="middle">バルサ 5mm角</text>
+<rect class="thin" x="554.00" y="518.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="523.80" font-size="4.6" text-anchor="middle">149.6</text>
+<rect class="thin" x="584.00" y="518.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="523.80" font-size="4.6" text-anchor="middle">8</text>
+<rect class="thin" x="606.00" y="518.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="523.80" font-size="4.6" text-anchor="middle">4.79</text>
+<rect class="thin" x="470.00" y="526.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="531.80" font-size="4.6" text-anchor="middle">B</text>
+<rect class="thin" x="492.00" y="526.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="531.80" font-size="4.6" text-anchor="middle">バルサ 5mm角</text>
+<rect class="thin" x="554.00" y="526.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="531.80" font-size="4.6" text-anchor="middle">149.6</text>
+<rect class="thin" x="584.00" y="526.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="531.80" font-size="4.6" text-anchor="middle">6</text>
+<rect class="thin" x="606.00" y="526.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="531.80" font-size="4.6" text-anchor="middle">3.59</text>
+<rect class="thin" x="470.00" y="534.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="539.80" font-size="4.6" text-anchor="middle">BS</text>
+<rect class="thin" x="492.00" y="534.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="539.80" font-size="4.6" text-anchor="middle">バルサ 5mm角</text>
+<rect class="thin" x="554.00" y="534.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="539.80" font-size="4.6" text-anchor="middle">78.3</text>
+<rect class="thin" x="584.00" y="534.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="539.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="534.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="539.80" font-size="4.6" text-anchor="middle">1.25</text>
+<rect class="thin" x="470.00" y="542.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="547.80" font-size="4.6" text-anchor="middle">T</text>
+<rect class="thin" x="492.00" y="542.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="547.80" font-size="4.6" text-anchor="middle">バルサ 3mm角</text>
+<rect class="thin" x="554.00" y="542.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="547.80" font-size="4.6" text-anchor="middle">90.0</text>
+<rect class="thin" x="584.00" y="542.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="547.80" font-size="4.6" text-anchor="middle">9</text>
+<rect class="thin" x="606.00" y="542.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="547.80" font-size="4.6" text-anchor="middle">1.17</text>
+<rect class="thin" x="470.00" y="550.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="555.80" font-size="4.6" text-anchor="middle">P0</text>
+<rect class="thin" x="492.00" y="550.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="555.80" font-size="4.6" text-anchor="middle">バルサ 4mm角</text>
+<rect class="thin" x="554.00" y="550.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="555.80" font-size="4.6" text-anchor="middle">118.8</text>
+<rect class="thin" x="584.00" y="550.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="555.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="550.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="555.80" font-size="4.6" text-anchor="middle">1.22</text>
+<rect class="thin" x="470.00" y="558.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="563.80" font-size="4.6" text-anchor="middle">P1</text>
+<rect class="thin" x="492.00" y="558.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="563.80" font-size="4.6" text-anchor="middle">バルサ 4mm角</text>
+<rect class="thin" x="554.00" y="558.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="563.80" font-size="4.6" text-anchor="middle">68.8</text>
+<rect class="thin" x="584.00" y="558.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="563.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="558.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="563.80" font-size="4.6" text-anchor="middle">0.70</text>
+<rect class="thin" x="470.00" y="566.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="571.80" font-size="4.6" text-anchor="middle">P2</text>
+<rect class="thin" x="492.00" y="566.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="571.80" font-size="4.6" text-anchor="middle">バルサ 4mm角</text>
+<rect class="thin" x="554.00" y="566.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="571.80" font-size="4.6" text-anchor="middle">31.3</text>
+<rect class="thin" x="584.00" y="566.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="571.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="566.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="571.80" font-size="4.6" text-anchor="middle">0.32</text>
+<rect class="thin" x="470.00" y="574.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="579.80" font-size="4.6" text-anchor="middle">P3</text>
+<rect class="thin" x="492.00" y="574.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="579.80" font-size="4.6" text-anchor="middle">バルサ 4mm角</text>
+<rect class="thin" x="554.00" y="574.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="579.80" font-size="4.6" text-anchor="middle">8.2</text>
+<rect class="thin" x="584.00" y="574.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="579.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="574.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="579.80" font-size="4.6" text-anchor="middle">0.08</text>
+<rect class="thin" x="470.00" y="582.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="587.80" font-size="4.6" text-anchor="middle">S1</text>
+<rect class="thin" x="492.00" y="582.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="587.80" font-size="4.6" text-anchor="middle">バルサ 5mm角</text>
+<rect class="thin" x="554.00" y="582.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="587.80" font-size="4.6" text-anchor="middle">113.6</text>
+<rect class="thin" x="584.00" y="582.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="587.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="582.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="587.80" font-size="4.6" text-anchor="middle">1.82</text>
+<rect class="thin" x="470.00" y="590.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="595.80" font-size="4.6" text-anchor="middle">D1</text>
+<rect class="thin" x="492.00" y="590.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="595.80" font-size="4.6" text-anchor="middle">厚紙 t=0.5</text>
+<rect class="thin" x="554.00" y="590.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="595.80" font-size="4.6" text-anchor="middle">113.6</text>
+<rect class="thin" x="584.00" y="590.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="595.80" font-size="4.6" text-anchor="middle">2</text>
+<rect class="thin" x="606.00" y="590.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="595.80" font-size="4.6" text-anchor="middle">7.16</text>
+<rect class="thin" x="470.00" y="598.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="603.80" font-size="4.6" text-anchor="middle">S2</text>
+<rect class="thin" x="492.00" y="598.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="603.80" font-size="4.6" text-anchor="middle">バルサ 5mm角</text>
+<rect class="thin" x="554.00" y="598.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="603.80" font-size="4.6" text-anchor="middle">138.4</text>
+<rect class="thin" x="584.00" y="598.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="603.80" font-size="4.6" text-anchor="middle">4</text>
+<rect class="thin" x="606.00" y="598.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="603.80" font-size="4.6" text-anchor="middle">2.21</text>
+<rect class="thin" x="470.00" y="606.00" width="22.00" height="8.00"/>
+<text class="" x="481.00" y="611.80" font-size="4.6" text-anchor="middle">D2</text>
+<rect class="thin" x="492.00" y="606.00" width="62.00" height="8.00"/>
+<text class="" x="523.00" y="611.80" font-size="4.6" text-anchor="middle">厚紙 t=0.5</text>
+<rect class="thin" x="554.00" y="606.00" width="30.00" height="8.00"/>
+<text class="" x="569.00" y="611.80" font-size="4.6" text-anchor="middle">138.4</text>
+<rect class="thin" x="584.00" y="606.00" width="22.00" height="8.00"/>
+<text class="" x="595.00" y="611.80" font-size="4.6" text-anchor="middle">2</text>
+<rect class="thin" x="606.00" y="606.00" width="30.00" height="8.00"/>
+<text class="" x="621.00" y="611.80" font-size="4.6" text-anchor="middle">8.72</text>
+<text class="" x="470.00" y="621.00" font-size="5.5" text-anchor="start">合計（接着剤を除く）≈ 33.0 g</text>
+<text class="" x="470.00" y="629.00" font-size="4.4" text-anchor="start">密度仮定: バルサ 0.16 g/cm³、厚紙 0.70 g/cm³</text>
+<rect class="thin" x="700.00" y="735.00" width="40.00" height="11.00"/>
+<rect class="thin" x="740.00" y="735.00" width="140.00" height="11.00"/>
+<text class="" x="720.00" y="742.50" font-size="5" text-anchor="middle">図名</text>
+<text class="" x="745.00" y="742.50" font-size="5" text-anchor="start">一般図（簡易下書き）</text>
+<rect class="thin" x="700.00" y="746.00" width="40.00" height="11.00"/>
+<rect class="thin" x="740.00" y="746.00" width="140.00" height="11.00"/>
+<text class="" x="720.00" y="753.50" font-size="5" text-anchor="middle">構造形式</text>
+<text class="" x="745.00" y="753.50" font-size="5" text-anchor="start">ダビンチアーチ・上路式</text>
+<rect class="thin" x="700.00" y="757.00" width="40.00" height="11.00"/>
+<rect class="thin" x="740.00" y="757.00" width="140.00" height="11.00"/>
+<text class="" x="720.00" y="764.50" font-size="5" text-anchor="middle">縮尺</text>
+<text class="" x="745.00" y="764.50" font-size="5" text-anchor="start">1:1（断面図 2:1）</text>
+<rect class="thin" x="700.00" y="768.00" width="40.00" height="11.00"/>
+<rect class="thin" x="740.00" y="768.00" width="140.00" height="11.00"/>
+<text class="" x="720.00" y="775.50" font-size="5" text-anchor="middle">作成日</text>
+<text class="" x="745.00" y="775.50" font-size="5" text-anchor="start">2026-10-21</text>
+</svg>
