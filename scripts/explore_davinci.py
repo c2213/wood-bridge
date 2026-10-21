@@ -32,11 +32,41 @@ def geometry(n_seg, lng, trs, trs_load=None):
                 length=chord + 2 * over, theta=theta, feasible=feasible)
 
 
+def sub2(a, b):
+    return a[0] - b[0], a[1] - b[1]
+
+
+def ab_joint_cap(m, ab, b, interfaces):
+    """A–B 側面接着点で受け渡す力（P=1 あたり）から、その接着が決める破壊荷重を返す。"""
+    worst = 0.0
+    for nd, sin_t in ab:
+        fx = fy = 0.0
+        for e in m.elems:
+            if e.get("kind") != "A" or nd not in (e["i"], e["j"]):
+                continue
+            kl, T = m.k_local(e)
+            dg = [m.u[d] for d in e["dofs"]]
+            dl = [sum(T[a][c] * dg[c] for c in range(6)) for a in range(6)]
+            fl = [sum(kl[a][c] * dl[c] for c in range(6)) for a in range(6)]
+            fg = [sum(T[c][a] * fl[c] for c in range(6)) for a in range(6)]
+            o = 0 if e["i"] == nd else 3
+            fx += fg[o]
+            fy += fg[o + 1]
+        cap = interfaces * (b * b / sin_t) * MAT["tau_lap"]   # 交差する2材の側面の重なり面積
+        worst = max(worst, math.hypot(fx, fy) / cap)
+    return 1 / worst if worst > 0 else float("inf")
+
+
 def build(cfg):
     """cfg から 2D モデルと重量を作る。下路は片側リブ（荷重 P/2）、上路は全幅（荷重 P）。"""
     n, lng, trs, (nA, nB) = cfg["n"], SECTIONS[cfg["long"]], SECTIONS[cfg["trans"]], cfg["rows"]
     tl = SECTIONS[cfg["trans_load"]] if cfg.get("trans_load") else None
     g = geometry(n, lng, trs, tl)
+    if cfg.get("over") is not None:   # 突き出しを指定（横材の半幅 + 0.5 mm 以上が必要）
+        g["length"] += 2 * (cfg["over"] - g["over"])
+        g["over"] = cfg["over"]
+        if cfg["over"] < max(trs[0], tl[0] if tl else 0.0) / 2 + 0.5:
+            g["feasible"] = False
     r, alpha, delta, theta = g["r"], g["alpha"], g["delta"], g["theta"]
     E, rho = MAT["E"], MAT["rho"]
     s_str = cfg.get("tie", 5.0)
@@ -74,30 +104,64 @@ def build(cfg):
     wide = set(load_nodes) if tl else set()   # 荷重が入る節点だけ横材を幅広（5×15 平使い）にする
 
     def arm(a, t, rows):
-        if t in [tn[i] for i in wide]:
-            m.frame(a, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="J", rows=rows, s=b, area=b * tl[0],
-                    jcap=jcap * tl[0] / trs[0])
+        ar, jc = (b * tl[0], jcap * tl[0] / trs[0]) if t in [tn[i] for i in wide] else (area, jcap)
+        if cfg.get("soft_joints"):
+            # 交差部の実際の柔らかさ: 法線方向は横材の繊維直角圧縮（E90）、接線方向は横材の
+            # ころがりせん断（G_roll）が、厚さ δ の層で変形するとみなす。rows 列ぶんを並列に足す。
+            L = math.dist(m.nodes[a], m.nodes[t])
+            kn = MAT["E90"] * ar / delta * rows
+            kt = MAT["G_roll"] * ar / delta * rows
+            m.frame(a, t, kn * L, kt * L ** 3 / 3, hj=True, kind="J", rows=rows, s=b, area=ar, jcap=jc)
         else:
-            m.frame(a, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="J", rows=rows, s=b, area=area, jcap=jcap)
+            m.frame(a, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="J", rows=rows, s=b, area=ar, jcap=jc)
 
     mids = {}
     members = [("A", k, k + 2) for k in range(0, n, 2)] + [("B", k, k + 2) for k in range(1, n - 1, 2)] \
         + [("B", 0, 1), ("B", n - 1, n)]
     length_total = 0.0
+    ends = {}
+    mems = []
     for fam, i0, i1 in members:
         nr = nA if fam == "A" else nB
-        pts = []
-        for i in (i0, i1):
+        pts = []   # (部材上の位置 t, ノード)
+        for t_, i in ((0.0, i0), (1.0, i1)):
+            if cfg.get("rigid_ends") and (fam, i) in ends:   # 同系の端どうしを突き付け接着（連続材として扱う）
+                pts.append((t_, ends[(fam, i)]))
+                continue
             p = m.node(*P(r + delta, i))
             arm(p, tn[i], nr)
-            pts.append(p)
+            ends[(fam, i)] = p
+            pts.append((t_, p))
         if i1 - i0 == 2:
-            pm = m.node(*P(r - delta, i0 + 1))
+            pm = m.node(*P(r - delta, i0 + 1))   # 弦の中点（半径方向＝部材の法線方向）
             arm(pm, tn[i0 + 1], nr)
             mids[i0 + 1] = pm
-            pts.insert(1, pm)
-        m.beam_line(pts, 3, E * A1 * nr, E * I1 * nr, kind=fam, rows=nr, s=b, b=b, h=h, lb=g["chord"] / 2)
+            pts.append((0.5, pm))
+        mems.append(dict(fam=fam, nr=nr, e0=P(r + delta, i0), e1=P(r + delta, i1), pts=pts))
         length_total += nr * (math.dist(P(r + delta, i0), P(r + delta, i1)) + 2 * g["over"])
+    # A系と B系を密着させ、側面図で X 字に交差する点を接着する（両者を同じノードで剛に結ぶ）
+    ab = []
+    if cfg.get("ab_glue"):
+        for ma in (x for x in mems if x["fam"] == "A"):
+            for mb in (x for x in mems if x["fam"] == "B"):
+                da, db = sub2(ma["e1"], ma["e0"]), sub2(mb["e1"], mb["e0"])
+                den = da[0] * db[1] - da[1] * db[0]
+                if abs(den) < 1e-12:
+                    continue
+                w0 = sub2(mb["e0"], ma["e0"])
+                ta = (w0[0] * db[1] - w0[1] * db[0]) / den
+                tb = (w0[0] * da[1] - w0[1] * da[0]) / den
+                if 0.03 < ta < 0.97 and 0.03 < tb < 0.97:
+                    nd = m.node(ma["e0"][0] + ta * da[0], ma["e0"][1] + ta * da[1])
+                    ma["pts"].append((ta, nd))
+                    mb["pts"].append((tb, nd))
+                    cosang = abs(da[0] * db[0] + da[1] * db[1]) / math.hypot(*da) / math.hypot(*db)
+                    ab.append((nd, math.sqrt(max(1e-6, 1 - cosang ** 2))))
+    for x in mems:
+        pts = [nd for _, nd in sorted(x["pts"])]
+        x_nr = x["nr"]
+        m.beam_line(pts, 2, E * A1 * x_nr, E * I1 * x_nr, kind=x["fam"], rows=x_nr, s=b, b=b, h=h,
+                    lb=g["chord"] / 2)
     for t, d in ((tn[0], deck[0]), (tn[-1], deck[-1])):
         m.frame(d, t, E * A1 * 1e3, E * I1 * 1e3, hj=True, kind="L", rows=1, s=b)
 
@@ -105,7 +169,8 @@ def build(cfg):
     w = {}
     sides = 2 if through else 1
     w["アーチ縦材"] = sides * length_total * b * h * rho
-    rib_w = (nA + nB) * b + (nA + nB - 1) * GAP + 4.0     # リブ幅（横材は両端 2 mm ずつ突き出す）
+    gap = 0.0 if cfg.get("ab_glue") else GAP
+    rib_w = (nA + nB) * b + (nA + nB - 1) * gap + 4.0     # リブ幅（横材は両端 2 mm ずつ突き出す）
     if through:
         z_c = CLEAR_EDGE + rib_w / 2
         full = [i for i in range(n + 1) if P(r, i)[1] - hh(i) >= deck_top + md.CLEAR_MIN]
@@ -125,8 +190,10 @@ def build(cfg):
         m.load_nodes = [deck[i] for i in load_nodes]
         span_c = 2 * z_c
         cross = len(load_nodes) * 75 * span_c + 2 * 25 * span_c
+        cross_x = [xs[0], xs[-1]] + [xs[i] for i in load_nodes]
         if cfg["hang"] != "載荷点のみ" or cfg["sheet"] != "なし":
             cross += (n - 1 - len(load_nodes)) * 25 * span_c
+            cross_x += [xs[i] for i in range(1, n) if i not in load_nodes]
         w["横桁"] = cross * rho
         w["ハンガー"] = 2 * hl * 9 * rho if cfg["hanger"] == "バルサ3mm角" else 0.0
         w["床版"] = SHEETS[cfg["sheet"]]
@@ -139,6 +206,7 @@ def build(cfg):
             m.loads[("v", tn[i])] = m.loads.get(("v", tn[i]), 0.0) - 0.5
         m.load_nodes = [tn[i] for i in load_nodes]
         span_c = md.DECK_W
+        cross_x = list(xs)
         w["床版"] = 0.0
         joints = (nA + nB) * (n + 1) + 6
         width_ok = True
@@ -153,7 +221,8 @@ def build(cfg):
         w["交差部ガセット"] = (sides * (nA + nB) * (n + 1) * 2 * (GUSSET["L"] * (h + trs[1] + 4))
                           * GUSSET["t"] * md.RHO_PAPER)
     ok = g["feasible"] and g["length"] <= md.MAX_MEMBER and t_max <= md.MAX_MEMBER and span_c <= md.MAX_MEMBER and width_ok
-    return m, dict(w=w, W=sum(w.values()), ok=ok, geo=g, load_nodes=load_nodes, xs=xs, t_max=t_max,
+    return m, dict(w=w, W=sum(w.values()), ok=ok, geo=g, load_nodes=load_nodes, xs=xs, t_max=t_max, ab=ab,
+                   ab_if=nA + nB - 1, b=b, cross_x=sorted(cross_x), s_str=s_str, h_str=h_str,
                    crown=P(r, n // 2)[1], cross_span=span_c)
 
 
@@ -163,6 +232,8 @@ def run(cfg):
         return None
     r = af.evaluate(m)
     caps = dict(r["caps"])
+    if info["ab"]:
+        caps["abjoint"] = (ab_joint_cap(m, info["ab"], info["b"], info["ab_if"]), "A–B 側面接着")
     if cfg["type"] == "下路":   # 載荷横桁（5×15 縦使い）の曲げ。P/2 を幅方向に等分布
         L = info["cross_span"]
         caps["cross"] = (MAT["fm"] * (5 * 15 ** 2 / 6) / (0.5 * L / 8), "載荷横桁の曲げ")
@@ -172,11 +243,21 @@ def run(cfg):
         L = md.DECK_W / max(1, nrow)
         z = 5 * 15 ** 2 / 6 if cfg.get("load_beam") else trs[0] * trs[1] ** 2 / 6
         caps["cross"] = (MAT["fm"] * z / (0.5 * L / 8), "載荷点の横材の曲げ")
+    # 縦桁の横倒れ座屈（横桁位置を横方向の支点とみなす）: M_cr = (π/Lb)·√(E·Iy·G·J)
+    bs, hs = info["s_str"], info["h_str"]
+    Lb = max(b_ - a_ for a_, b_ in zip(info["cross_x"], info["cross_x"][1:]))
+    Iy, J = hs * bs ** 3 / 12, hs * bs ** 3 / 3 * (1 - 0.63 * min(bs, hs) / max(bs, hs))
+    mcr = math.pi / Lb * math.sqrt(MAT["E"] * Iy * 0.054 * MAT["E"] * J)
+    m_s = max(f["M"] for e, f in zip(m.elems, m.forces) if e.get("kind") == "S")
+    caps["ltb"] = (mcr / m_s if m_s > 0 else float("inf"), "縦桁の横倒れ座屈 Lb=%.0f" % Lb)
     gov = min(caps.items(), key=lambda kv: kv[1][0])
     P = gov[1][0]
     W = info["W"]
+    # アーチ分担率: ハンガーがアーチへ運ぶ荷重の割合（残りは縦桁が梁として運ぶ）
+    share = (sum(f["N"] for e, f in zip(m.elems, m.forces) if e.get("kind") == "H" and not e.get("off")) / 0.5
+             if cfg["type"] == "下路" else 1.0)
     return dict(cfg=cfg, P=P, W=W, CP=P / W ** 1.5, ratio=P / 9.81 / W * 1000, gov=gov, caps=caps, info=info,
-                tie=r["tie"], defl=r["defl"])
+                tie=r["tie"], defl=r["defl"], share=share)
 
 
 def configs():
@@ -205,15 +286,21 @@ def refine_configs():
 
 
 def nocard_configs():
-    """厚紙を使わない（床版シート・交差部ガセットなし）下路案の探索。"""
+    """厚紙を使わない（床版シート・交差部ガセットなし）下路案の探索。
+    --soft: 交差部の柔らかさを考慮し、A–B 側面接着と突き出し 3 mm（全 5 角が収まる）も選択肢に加える。"""
+    soft = "--soft" in sys.argv
     for n, lng, trs, rows, hanger, hang, th in itertools.product(
             (8, 10, 12), ("4角", "5角", "5×15平"), SECTIONS, ROWS, ("バルサ3mm角", "ナイロン3号"),
             ("全節点", "載荷点のみ"), (5.0, 15.0)):
-        yield dict(type="下路", n=n, long=lng, trans=trs, rows=rows, joint="接着のみ", hanger=hanger,
-                   hang=hang, sheet="なし", tie=5.0, tie_h=th)
-        if trs == "5角":
-            yield dict(type="下路", n=n, long=lng, trans=trs, trans_load="5×15平", rows=rows, joint="接着のみ",
-                       hanger=hanger, hang=hang, sheet="なし", tie=5.0, tie_h=th)
+        base = dict(type="下路", n=n, long=lng, trans=trs, rows=rows, joint="接着のみ", hanger=hanger,
+                    hang=hang, sheet="なし", tie=5.0, tie_h=th)
+        variants = [base]
+        if trs == "5角" and not soft:
+            variants.append(dict(base, trans_load="5×15平"))
+        if soft:
+            variants = [dict(v, soft_joints=True, ab_glue=ab, **({"over": 3.0} if ov else {}))
+                        for v in variants for ab in (False, True) for ov in (False, True)]
+        yield from variants
 
 
 def label(c):
@@ -226,6 +313,10 @@ def label(c):
         s += " タイ%g×%g%s" % (c["tie"], c.get("tie_h", c["tie"]), " 荷重受け5×15" if c.get("load_beam") else "")
     if c["type"] == "下路" and "tie_h" in c:
         s += " 縦桁%g×%g" % (c["tie"], c["tie_h"])
+    if c.get("ab_glue"):
+        s += " A-B側面接着"
+    if c.get("over") is not None:
+        s += " 突出%g" % c["over"]
     return s
 
 
@@ -233,13 +324,13 @@ def main():
     results, cache = [], {}
     gen = refine_configs if "--refine" in sys.argv else nocard_configs if "--nocard" in sys.argv else configs
     for cfg in gen():
-        key = tuple(sorted((k, v) for k, v in cfg.items() if k != "sheet"))
+        key = tuple(sorted((k, str(v)) for k, v in cfg.items() if k != "sheet"))
         if key in cache:          # 床版シートは重量だけに効くので FEM を使い回す
             base = cache[key]
             if base is None:
                 continue
             m, info = build(cfg)
-            res = dict(base, cfg=cfg, W=info["W"], info=info)
+            res = dict(base, cfg=cfg, W=info["W"], info=dict(base["info"], w=info["w"], W=info["W"]))
             res["CP"] = res["P"] / res["W"] ** 1.5
             res["ratio"] = res["P"] / 9.81 / res["W"] * 1000
         else:
@@ -254,8 +345,14 @@ def main():
         sub = [r for r in results if r["cfg"]["type"] == typ]
         print("\n=== %s 上位10" % typ)
         for r in sub[:10]:
-            print("  CP %.2f  P %4.0f N  W %5.1f g  荷重/自重 %4.0f  支配:%s  | %s"
-                  % (r["CP"], r["P"], r["W"], r["ratio"], r["gov"][1][1], label(r["cfg"])))
+            print("  CP %.2f  P %4.0f N  W %5.1f g  荷重/自重 %4.0f  アーチ分担 %3.0f%%  支配:%s  | %s"
+                  % (r["CP"], r["P"], r["W"], r["ratio"], 100 * r["share"], r["gov"][1][1], label(r["cfg"])))
+        arch = [r for r in sub if r["share"] >= 0.6]
+        if typ == "下路" and arch:
+            print("\n=== 下路のうちアーチ分担 60%% 以上（アーチが主に荷重を運ぶ案）上位10")
+            for r in arch[:10]:
+                print("  CP %.2f  P %4.0f N  W %5.1f g  荷重/自重 %4.0f  アーチ分担 %3.0f%%  支配:%s  | %s"
+                      % (r["CP"], r["P"], r["W"], r["ratio"], 100 * r["share"], r["gov"][1][1], label(r["cfg"])))
     base = [r for r in results if r["cfg"] == dict(type="下路", n=8, long="5角", trans="3角", rows=(2, 1),
                                                    joint="接着のみ", hanger="ナイロン3号", hang="全節点",
                                                    sheet="ケント紙0.2")]
